@@ -1,0 +1,121 @@
+use chrono::{DateTime, NaiveDate, Utc};
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+use validator::{Validate, ValidationError};
+use crate::constants::AttendanceLeaveType;
+use crate::dtos::attendance_challenge::ChallengeDto;
+
+#[derive(Debug, Deserialize, Clone, Validate)]
+pub struct AttendanceReq {
+    pub challenge_id: Uuid,
+
+    pub latitude: f64,
+    pub longitude: f64,
+    pub accuracy_meters: Option<f64>,
+
+    // dari mobile (hasil liveness + match)
+    pub liveness_score: Option<f64>,
+    pub face_match_score: Option<f64>,
+
+    // selfie disimpan di object storage (minio/s3)
+    pub selfie_object_key: Option<String>,
+
+    pub device_id: Option<String>,
+    pub client_version: Option<String>,
+
+    pub device_model: Option<String>,
+    pub android_version: Option<String>,
+    pub app_build: Option<String>,
+
+    pub is_mock: Option<bool>,
+    pub provider: Option<String>,
+    pub location_age_ms: Option<i64>,
+
+    pub leave_type: Option<AttendanceLeaveType>,   // atau enum
+    pub leave_notes: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AttendanceDto {
+    pub session_id: Uuid,
+    pub work_date: NaiveDate,
+    pub check_in_at: Option<DateTime<Utc>>,
+    pub check_out_at: Option<DateTime<Utc>>,
+    pub geofence_id: Option<Uuid>,
+    pub distance_to_fence_m: Option<f64>,
+    pub geofence_name: Option<String>,
+}
+
+
+#[derive(Debug, Serialize)]
+pub struct AttendanceResp {
+    pub status: &'static str,
+    pub data: AttendanceDto,
+}
+
+#[derive(Debug, Serialize,  Default, sqlx::FromRow)]
+pub struct AttendanceRekapDto {
+    pub session_id: Uuid,
+    pub work_date: NaiveDate,
+    pub user_id: Uuid,
+    pub full_name: String,
+    pub nrp: String,
+    pub satker_name: String,
+    pub satker_code: String,
+    pub check_in_at: Option<DateTime<Utc>>,
+    pub check_out_at: Option<DateTime<Utc>>,
+    pub check_in_geofence_id: Option<Uuid>,
+    pub check_out_geofence_id: Option<Uuid>,
+    pub check_in_distance_to_fence_m: Option<f64>,
+    pub check_out_distance_to_fence_m: Option<f64>,
+    pub check_in_geofence_name: Option<String>,
+    pub check_out_geofence_name: Option<String>,
+    pub check_in_latitude: Option<f64>,
+    pub check_in_longitute: Option<f64>,
+    pub check_out_latitude: Option<f64>,
+    pub check_out_longitute: Option<f64>,
+    pub check_in_selfie_object_key: Option<String>,
+    pub check_out_selfie_object_key: Option<String>,
+    pub check_in_accuracy_meters: Option<f64>,
+    pub check_out_accuracy_meters: Option<f64>,
+    pub check_in_attendance_leave_type: Option<AttendanceLeaveType>,
+    pub check_out_attendance_leave_type: Option<AttendanceLeaveType>,
+    pub check_in_attendance_leave_notes: Option<String>,
+    pub check_out_attendance_leave_notes: Option<String>,
+    pub check_in_device_id: Option<String>,
+    pub check_out_device_id: Option<String>,
+    pub check_in_device_model: Option<String>,
+    pub check_out_device_model: Option<String>,
+    pub check_in_device_name: Option<String>,
+    pub check_out_device_name: Option<String>,
+}
+
+pub fn validate_attendance_query(req: &AttendanceRekapDtoQuery) -> Result<(), ValidationError> {
+    if req.to < req.from {
+        let mut error = ValidationError::new("invalid_range");
+        error.message = Some("Tanggal end tidak boleh lebih awal dari tanggal start".into());
+        return Err(error);
+    }
+
+    Ok(())
+}
+
+#[derive(Debug, Deserialize,Validate)]
+#[validate(schema(function = "validate_attendance_query"))]
+pub struct AttendanceRekapDtoQuery {
+    pub from: NaiveDate,
+    pub to: NaiveDate,
+    pub user_id: Option<Uuid>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AttendanceRekapDtoResp {
+    pub status: &'static str,
+    pub data: AttendanceRekapDto,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AttendanceRekapsDtoResp {
+    pub status: &'static str,
+    pub data: Vec<AttendanceRekapDto>,
+}

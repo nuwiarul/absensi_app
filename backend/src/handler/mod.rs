@@ -1,0 +1,11 @@
+pub mod attendance;
+pub mod attendance_challenge;
+pub mod auth;
+pub mod geofence;
+pub mod leave_request;
+pub mod satker;
+pub mod satker_head;
+pub mod user;
+pub mod schedule;
+pub mod upload;
+pub mod files;
