@@ -10,3 +10,7 @@ export async function upsertWorkPattern(satkerId: string, body: UpsertWorkPatter
   const res = await http.post<UpsertWorkPatternResp>(`/satkers/${satkerId}/work-patterns`, body)
   return res.data.data
 }
+
+export async function deleteWorkPattern(satkerId: string, effectiveFrom: string): Promise<void> {
+  await http.delete(`/satkers/${satkerId}/work-patterns/${effectiveFrom}`)
+}

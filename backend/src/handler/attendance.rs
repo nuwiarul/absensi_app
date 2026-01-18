@@ -22,6 +22,7 @@ use chrono_tz::Asia::Jakarta;
 use crate::auth::rbac::UserRole;
 use crate::database::schedule::ScheduleRepo;
 use crate::dtos::schedule::{can_manage_schedule, ScheduleQuery, SchedulesResp};
+use crate::utils::timezone_cache::get_timezone_cached;
 
 pub fn attendance_handler() -> Router {
     Router::new()
@@ -162,8 +163,11 @@ pub async fn check_in(
     }
 
     let now = Utc::now();
-    let now_wib = now.with_timezone(&Jakarta);
-    let work_date = now_wib.date_naive();
+
+    //let now_wib = now.with_timezone(&Jakarta);
+    //let work_date = now_wib.date_naive();
+    let tz = get_timezone_cached(&app_state).await?;
+    let work_date = now.with_timezone(&tz).date_naive();
 
     let session_id = app_state
         .db_client
@@ -354,8 +358,10 @@ pub async fn check_out(
     }
 
     let now = Utc::now();
-    let now_wib = now.with_timezone(&Jakarta);
-    let work_date = now_wib.date_naive();
+    //let now_wib = now.with_timezone(&Jakarta);
+    //let work_date = now_wib.date_naive();
+    let tz = get_timezone_cached(&app_state).await?;
+    let work_date = now.with_timezone(&tz).date_naive();
 
     let session_id = app_state
         .db_client

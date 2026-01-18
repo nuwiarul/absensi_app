@@ -11,3 +11,4 @@ pub mod upload;
 pub mod files;
 pub mod holiday;
 pub mod working_days;
+pub mod settings;

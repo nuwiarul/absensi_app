@@ -15,8 +15,10 @@ use validator::Validate;
 use crate::constants::SUPERUSER_SATKER_ID;
 use crate::database::holiday::HolidayRepo;
 use crate::database::work_calendar::WorkCalendarRepo;
+use crate::database::settings::SettingsRepo;
 use crate::database::work_pattern::{WorkPatternRepo, pick_effective_pattern, WorkPatternUpsert};
 use crate::dtos::work_calendar::{GenerateCalendarQuery, GenerateCalendarResp, GenerateCalendarRespData};
+use crate::dtos::work_calendar::{ListCalendarQuery, ListCalendarResp};
 use crate::constants::{CalendarDayType, HolidayKind};
 use chrono::{Datelike, Weekday, NaiveTime, NaiveDate};
 use crate::dtos::work_pattern::{UpsertWorkPatternReq, UpsertWorkPatternResp, WorkPatternsResp};
@@ -26,10 +28,43 @@ pub fn satker_handler() -> Router {
         .route("/", get(get_satker))
         .route("/{id}", get(find_satker))
         .route("/{id}/work-patterns", get(list_work_patterns).post(upsert_work_pattern))
+        .route("/{id}/work-patterns/{effective_from}", delete(delete_work_pattern))
+        .route("/{id}/calendar", get(list_calendar_days))
         .route("/{id}/calendar/generate", post(generate_calendar))
         .route("/create", post(create_satker))
         .route("/update/{id}", put(update_satker))
         .route("/delete/{id}", delete(delete_satker))
+}
+
+pub async fn list_calendar_days(
+    Extension(app_state): Extension<Arc<AppState>>,
+    Extension(user_claims): Extension<AuthMiddleware>,
+    Path(satker_id): Path<Uuid>,
+    Query(q): Query<ListCalendarQuery>,
+) -> Result<impl IntoResponse, HttpError> {
+    let role = user_claims.user_claims.role;
+    let allowed = role == crate::auth::rbac::UserRole::Superadmin
+        || ((role == crate::auth::rbac::UserRole::SatkerAdmin
+        || role == crate::auth::rbac::UserRole::SatkerHead)
+        && user_claims.user_claims.satker_id == satker_id);
+    if !allowed {
+        return Err(HttpError::unauthorized("forbidden"));
+    }
+
+    if q.to < q.from {
+        return Err(HttpError::bad_request("to: harus >= from"));
+    }
+
+    let rows = app_state
+        .db_client
+        .list_calendar_days(satker_id, q.from, q.to)
+        .await
+        .map_err(|e| HttpError::server_error(e.to_string()))?;
+
+    Ok(Json(ListCalendarResp {
+        status: "200".to_string(),
+        data: rows,
+    }))
 }
 
 pub async fn create_satker(
@@ -127,33 +162,13 @@ pub async fn find_satker(
 
 pub async fn get_satker(
     Extension(app_state): Extension<Arc<AppState>>,
-    Extension(user_claims): Extension<AuthMiddleware>,
+    Extension(_user_claims): Extension<AuthMiddleware>,
 ) -> Result<impl IntoResponse, HttpError> {
-
-    /*
     let rows = app_state
         .db_client
         .get_satker_all()
         .await
         .map_err(|e| HttpError::server_error(e.to_string()))?;
-
-     */
-
-    let rows = if user_claims.user_claims.role == crate::auth::rbac::UserRole::Superadmin {
-        app_state
-            .db_client
-            .get_satker_all()
-            .await
-            .map_err(|e| HttpError::server_error(e.to_string()))?
-    } else {
-        // SatkerAdmin: only their own satker
-        let row = app_state
-            .db_client
-            .find_satker_by_id(user_claims.user_claims.satker_id)
-            .await
-            .map_err(|e| HttpError::server_error(e.to_string()))?;
-        row.into_iter().collect()
-    };
 
     let satker_dto = SatkerDto::to_rows(&rows);
 
@@ -339,8 +354,31 @@ pub async fn generate_calendar(
         return Err(HttpError::bad_request("to: harus >= from"));
     }
 
+    // Constraint: range must be within current year (operational timezone from settings).
+    {
+        use chrono::{Datelike, Utc};
+        use chrono_tz::Tz;
+        use std::str::FromStr;
+
+        let tz_value = app_state
+            .db_client
+            .get_timezone_value()
+            .await
+            .map_err(|e| HttpError::server_error(e.to_string()))?;
+
+        let tz: Tz = Tz::from_str(&tz_value).unwrap_or(chrono_tz::Asia::Jakarta);
+        let now_local = Utc::now().with_timezone(&tz);
+        let cur_year = now_local.year();
+        if q.from.year() != cur_year || q.to.year() != cur_year {
+            return Err(HttpError::bad_request(format!(
+                "range harus dalam tahun berjalan ({})",
+                cur_year
+            )));
+        }
+    }
+
     // Guard: do not generate absurdly large ranges
-    let max_days: i64 = 400;
+    let max_days: i64 = 370;
     let days = (q.to - q.from).num_days() + 1;
     if days > max_days {
         return Err(HttpError::bad_request(format!(
@@ -370,8 +408,17 @@ pub async fn generate_calendar(
     let mut holiday_by_date: std::collections::HashMap<NaiveDate, crate::models::Holiday> =
         std::collections::HashMap::new();
     for h in holidays {
-        // If multiple entries on same date, last one wins (SATKER holiday can override NATIONAL)
-        holiday_by_date.insert(h.holiday_date, h);
+        // Precedence: NATIONAL always applies to all satker.
+        // SATKER holidays are additive; if there is a clash on the same date,
+        // keep NATIONAL (do not allow SATKER to override).
+        let replace = match holiday_by_date.get(&h.holiday_date) {
+            None => true,
+            Some(existing) => existing.scope != crate::constants::HolidayScope::National
+                && h.scope == crate::constants::HolidayScope::National,
+        };
+        if replace {
+            holiday_by_date.insert(h.holiday_date, h);
+        }
     }
 
     let mut generated: i64 = 0;
@@ -539,5 +586,60 @@ pub async fn upsert_work_pattern(
     Ok(Json(UpsertWorkPatternResp {
         status: "200".to_string(),
         data: saved,
+    }))
+}
+
+pub async fn delete_work_pattern(
+    Extension(app_state): Extension<Arc<AppState>>,
+    Extension(user_claims): Extension<AuthMiddleware>,
+    Path((id, effective_from)): Path<(Uuid, String)>,
+) -> Result<impl IntoResponse, HttpError> {
+    // Authz
+    let role = user_claims.user_claims.role;
+    let allowed = role.can_manage_satkers()
+        || ((role == crate::auth::rbac::UserRole::SatkerAdmin || role == crate::auth::rbac::UserRole::SatkerHead)
+        && user_claims.user_claims.satker_id == id);
+    if !allowed {
+        return Err(HttpError::unauthorized("forbidden"));
+    }
+
+    let date = chrono::NaiveDate::parse_from_str(&effective_from, "%Y-%m-%d")
+        .map_err(|_| HttpError::bad_request("effective_from: format harus YYYY-MM-DD"))?;
+
+    // Safety rule: hanya boleh hapus work pattern yang paling lama berdasarkan created_at.
+    // Minimal harus tersisa 1 work pattern.
+    let patterns = app_state
+        .db_client
+        .list_work_patterns(id)
+        .await
+        .map_err(|e| HttpError::server_error(e.to_string()))?;
+
+    if patterns.len() < 2 {
+        return Err(HttpError::bad_request("minimal harus ada 1 work pattern"));
+    }
+
+    let mut by_created = patterns.clone();
+    by_created.sort_by_key(|p| p.created_at);
+    let oldest = by_created
+        .first()
+        .ok_or_else(|| HttpError::server_error("work pattern kosong"))?;
+
+    if oldest.effective_from != date {
+        return Err(HttpError::unauthorized("hanya boleh menghapus work pattern yang paling lama (berdasarkan created_at)"));
+    }
+
+    let affected = app_state
+        .db_client
+        .delete_work_pattern(id, date)
+        .await
+        .map_err(|e| HttpError::server_error(e.to_string()))?;
+
+    if affected == 0 {
+        return Err(HttpError::bad_request("work pattern tidak ditemukan"));
+    }
+
+    Ok(Json(SuccessResponse {
+        status: "200".to_string(),
+        data: "Sukses delete work pattern".to_string(),
     }))
 }

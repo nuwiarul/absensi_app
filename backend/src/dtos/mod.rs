@@ -17,6 +17,7 @@ pub mod holiday;
 pub mod work_calendar;
 pub mod work_pattern;
 pub mod working_days;
+pub mod settings;
 
 #[derive(Debug, Serialize)]
 pub struct SuccessResponse {

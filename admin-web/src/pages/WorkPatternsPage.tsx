@@ -3,9 +3,10 @@ import { toast } from "sonner"
 import { getSession } from "@/lib/auth"
 import { useSatkers } from "@/features/satkers/hooks"
 import { SatkerSelect } from "@/features/users/SatkerSelect"
-import { useUpsertWorkPattern, useWorkPatterns } from "@/features/work-patterns/hooks"
+import { useUpsertWorkPattern, useWorkPatterns, useDeleteWorkPattern } from "@/features/work-patterns/hooks"
 import type { SatkerWorkPattern, UpsertWorkPatternReq } from "@/features/work-patterns/types"
 import { Button } from "@/components/ui/button"
+import { ConfirmDialog } from "@/components/ConfirmDialog"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -26,7 +27,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {apiErrorMessage} from "@/lib/api-error.ts";
 
 type WeekKey = "mon_work" | "tue_work" | "wed_work" | "thu_work" | "fri_work" | "sat_work" | "sun_work"
 
@@ -73,6 +73,7 @@ export default function WorkPatternsPage() {
 
   const q = useWorkPatterns(satkerId || null)
   const upsert = useUpsertWorkPattern()
+  const del = useDeleteWorkPattern()
 
   const [open, setOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<SatkerWorkPattern | null>(null)
@@ -150,8 +151,8 @@ export default function WorkPatternsPage() {
       })
       toast.success(editing ? "Work pattern diupdate" : "Work pattern disimpan")
       setOpen(false)
-    } catch (e: unknown) {
-      toast.error(apiErrorMessage(e))
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message ?? "Gagal menyimpan")
     }
   }
 
@@ -212,9 +213,37 @@ export default function WorkPatternsPage() {
                     </TableCell>
                     <TableCell>{p.half_day_end ? hhmm(p.half_day_end) : "-"}</TableCell>
                     <TableCell>
-                      <Button variant="outline" size="sm" onClick={() => openEdit(p)}>
-                        Edit
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => openEdit(p)}>
+                          Edit
+                        </Button>
+                        {(q.data?.length ?? 0) >= 2 ? (
+                          <ConfirmDialog
+                            trigger={
+                              <Button variant="destructive" size="sm">
+                                Hapus
+                              </Button>
+                            }
+                            title="Hapus work pattern?"
+                            description={
+                              <span className="text-sm">
+                                Work pattern dengan effective_from <b>{p.effective_from}</b> akan dihapus.
+                              </span>
+                            }
+                            confirmText="Hapus"
+                            destructive
+                            loading={del.isPending}
+                            onConfirm={async () => {
+                              try {
+                                await del.mutateAsync({ satkerId, effectiveFrom: p.effective_from })
+                                toast.success("Work pattern dihapus")
+                              } catch (e: any) {
+                                toast.error(e?.response?.data?.message ?? "Gagal menghapus")
+                              }
+                            }}
+                          />
+                        ) : null}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -246,7 +275,8 @@ export default function WorkPatternsPage() {
           <DialogHeader>
             <DialogTitle>{editing ? "Edit Work Pattern" : "Tambah Work Pattern"}</DialogTitle>
             <DialogDescription>
-              Upsert: jika effective_from sama, maka akan ter-update.
+              Upsert: kunci record adalah <b>effective_from</b>. Saat edit, effective_from dikunci.
+              Jika ingin mengganti effective_from, buat pattern baru.
             </DialogDescription>
           </DialogHeader>
 
@@ -255,6 +285,7 @@ export default function WorkPatternsPage() {
               <Label>Effective From</Label>
               <Input
                 type="date"
+                disabled={!!editing}
                 value={form.effective_from}
                 onChange={(e) => setForm((s) => ({ ...s, effective_from: e.target.value }))}
               />

@@ -10,3 +10,4 @@ pub mod user_device;
 pub mod work_calendar;
 pub mod holiday;
 pub mod work_pattern;
+pub mod settings;

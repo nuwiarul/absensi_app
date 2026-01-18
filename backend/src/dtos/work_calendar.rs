@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use crate::models::SatkerCalendarDay;
 
 #[derive(Debug, Deserialize)]
 pub struct GenerateCalendarQuery {
@@ -15,4 +16,16 @@ pub struct GenerateCalendarResp {
 #[derive(Debug, Serialize)]
 pub struct GenerateCalendarRespData {
     pub days_generated: i64,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ListCalendarQuery {
+    pub from: chrono::NaiveDate,
+    pub to: chrono::NaiveDate,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ListCalendarResp {
+    pub status: String,
+    pub data: Vec<SatkerCalendarDay>,
 }

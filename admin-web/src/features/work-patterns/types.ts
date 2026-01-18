@@ -12,7 +12,8 @@ export type SatkerWorkPattern = {
   sun_work: boolean
   work_start: string // "HH:MM:SS" from backend
   work_end: string
-  half_day_end: string | null
+  half_day_end: string | null,
+  created_at?: string | null,
 }
 
 export type UpsertWorkPatternReq = {

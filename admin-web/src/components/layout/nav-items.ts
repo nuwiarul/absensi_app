@@ -10,8 +10,10 @@ const ALL: (NavItem & { roles: Role[] })[] = [
     { label: "Satker Head", to: "/satker-heads", roles: ["SUPERADMIN", "SATKER_ADMIN"] },
     { label: "Geofence", to: "/geofences", roles: ["SUPERADMIN", "SATKER_ADMIN"] },
     { label: "Work Patterns", to: "/work-patterns", roles: ["SUPERADMIN", "SATKER_ADMIN"] },
+    { label: "Holidays", to: "/holidays", roles: ["SUPERADMIN", "SATKER_ADMIN"] },
     { label: "Generate Calendar", to: "/calendar-generate", roles: ["SUPERADMIN", "SATKER_ADMIN"] },
-    { label: "Holiday Bulk", to: "/holidays", roles: ["SUPERADMIN", "SATKER_ADMIN"] },
+    { label: "Calendar Result", to: "/calendar/result", roles: ["SUPERADMIN", "SATKER_ADMIN"] },
+    { label: "Settings", to: "/settings", roles: ["SUPERADMIN"] },
 ]
 
 export function getNavItems(): NavItem[] {

@@ -166,6 +166,7 @@ pub struct SatkerWorkPattern {
     pub work_start: NaiveTime,
     pub work_end: NaiveTime,
     pub half_day_end: Option<NaiveTime>,
+    pub created_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]

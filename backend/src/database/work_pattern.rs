@@ -32,6 +32,8 @@ pub trait WorkPatternRepo {
         satker_id: Uuid,
         item: WorkPatternUpsert,
     ) -> Result<SatkerWorkPattern, Error>;
+
+    async fn delete_work_pattern(&self, satker_id: Uuid, effective_from: NaiveDate) -> Result<u64, Error>;
 }
 
 #[async_trait]
@@ -53,7 +55,8 @@ impl WorkPatternRepo for DBClient {
               sun_work,
               work_start,
               work_end,
-              half_day_end
+              half_day_end,
+              created_at
             FROM satker_work_patterns
             WHERE satker_id = $1
             ORDER BY effective_from ASC
@@ -113,7 +116,8 @@ impl WorkPatternRepo for DBClient {
               sun_work,
               work_start,
               work_end,
-              half_day_end
+              half_day_end,
+              created_at
             "#,
             satker_id,
             item.effective_from,
@@ -132,6 +136,18 @@ impl WorkPatternRepo for DBClient {
             .await?;
 
         Ok(row)
+    }
+
+    async fn delete_work_pattern(&self, satker_id: Uuid, effective_from: NaiveDate) -> Result<u64, Error> {
+        let res = sqlx::query!(
+            r#"DELETE FROM satker_work_patterns WHERE satker_id = $1 AND effective_from = $2"#,
+            satker_id,
+            effective_from
+        )
+            .execute(&self.pool)
+            .await?;
+
+        Ok(res.rows_affected())
     }
 }
 

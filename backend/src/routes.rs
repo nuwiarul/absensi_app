@@ -15,6 +15,7 @@ use tower_http::trace::TraceLayer;
 use crate::handler::files::files_handler;
 use crate::handler::holiday::holiday_handler;
 use crate::handler::schedule::schedule_handler;
+use crate::handler::settings::settings_handler;
 use crate::handler::upload::uploads_handler;
 use crate::handler::working_days::working_days_handler;
 
@@ -70,8 +71,8 @@ pub fn create_router(app_state: Arc<AppState>) -> Router {
             holiday_handler().layer(middleware::from_fn(auth_middleware)),
         )
         .nest(
-            "/working-days",
-            working_days_handler().layer(middleware::from_fn(auth_middleware)),
+            "/settings",
+            settings_handler().layer(middleware::from_fn(auth_middleware)),
         )
         .route("/health", get(health))
         .layer(TraceLayer::new_for_http())
