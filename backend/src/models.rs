@@ -1,5 +1,5 @@
 use crate::auth::rbac::UserRole;
-use crate::constants::{AttendanceEventType, AttendanceLeaveType, AttendanceStatus, LeaveStatus, LeaveType, ScheduleType};
+use crate::constants::{AttendanceEventType, AttendanceLeaveType, AttendanceStatus, CalendarDayType, HolidayKind, HolidayScope, LeaveStatus, LeaveType, ScheduleType};
 use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -147,4 +147,44 @@ pub struct UserDevice {
     pub android_version: Option<String>,
     pub app_build: Option<String>,
     pub client_version: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct SatkerWorkPattern {
+    pub id: Uuid,
+    pub satker_id: Uuid,
+    pub effective_from: NaiveDate,
+
+    pub mon_work: bool,
+    pub tue_work: bool,
+    pub wed_work: bool,
+    pub thu_work: bool,
+    pub fri_work: bool,
+    pub sat_work: bool,
+    pub sun_work: bool,
+
+    pub work_start: NaiveTime,
+    pub work_end: NaiveTime,
+    pub half_day_end: Option<NaiveTime>,
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct Holiday {
+    pub id: Uuid,
+    pub scope: HolidayScope,
+    pub satker_id: Option<Uuid>,
+    pub holiday_date: NaiveDate,
+    pub kind: HolidayKind,
+    pub name: String,
+    pub half_day_end: Option<NaiveTime>,
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct SatkerCalendarDay {
+    pub satker_id: Uuid,
+    pub work_date: NaiveDate,
+    pub day_type: CalendarDayType,
+    pub expected_start: Option<NaiveTime>,
+    pub expected_end: Option<NaiveTime>,
+    pub note: Option<String>,
 }

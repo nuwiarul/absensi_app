@@ -69,10 +69,34 @@ pub async fn update_geofence(
     Path(id): Path<Uuid>,
     Json(payload): Json<UpdateGeofenceReq>,
 ) -> Result<impl IntoResponse, HttpError> {
+    /*
     if !can_manage_geofence(&user_claims.user_claims, user_claims.user_claims.satker_id) {
         return Err(HttpError::unauthorized(
             ErrorMessage::ForbiddenRequest.to_string(),
         ));
+    }
+
+     */
+
+    if user_claims.user_claims.role != UserRole::Superadmin {
+        if !can_manage_geofence(&user_claims.user_claims, user_claims.user_claims.satker_id) {
+            return Err(HttpError::unauthorized(
+                ErrorMessage::ForbiddenRequest.to_string(),
+            ));
+        }
+        // Pastikan geofence ini memang milik satker user.
+        let row = app_state
+            .db_client
+            .find_geofence(id)
+            .await
+            .map_err(|e| HttpError::server_error(e.to_string()))?;
+
+        let row = row.ok_or(HttpError::bad_request("Geofence not found.".to_string()))?;
+        if row.satker_id != user_claims.user_claims.satker_id {
+            return Err(HttpError::unauthorized(
+                ErrorMessage::ForbiddenRequest.to_string(),
+            ));
+        }
     }
 
     payload
@@ -104,10 +128,33 @@ pub async fn delete_geofence(
     Extension(user_claims): Extension<AuthMiddleware>,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, HttpError> {
+    /*
     if !can_manage_geofence(&user_claims.user_claims, user_claims.user_claims.satker_id) {
         return Err(HttpError::unauthorized(
             ErrorMessage::ForbiddenRequest.to_string(),
         ));
+    }
+
+     */
+
+    if user_claims.user_claims.role != UserRole::Superadmin {
+        if !can_manage_geofence(&user_claims.user_claims, user_claims.user_claims.satker_id) {
+            return Err(HttpError::unauthorized(
+                ErrorMessage::ForbiddenRequest.to_string(),
+            ));
+        }
+        let row = app_state
+            .db_client
+            .find_geofence(id)
+            .await
+            .map_err(|e| HttpError::server_error(e.to_string()))?;
+
+        let row = row.ok_or(HttpError::bad_request("Geofence not found.".to_string()))?;
+        if row.satker_id != user_claims.user_claims.satker_id {
+            return Err(HttpError::unauthorized(
+                ErrorMessage::ForbiddenRequest.to_string(),
+            ));
+        }
     }
 
     app_state

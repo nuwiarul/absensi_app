@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 use axum::http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
-use axum::http::Method;
+use axum::http::{HeaderName, Method};
 use redis::aio::ConnectionManager;
 use sqlx::postgres::PgPoolOptions;
 use tower_http::cors::CorsLayer;
@@ -73,7 +73,13 @@ async fn main() {
 
     let cors = CorsLayer::new()
         .allow_origin(origins.clone())
-        .allow_headers([AUTHORIZATION, ACCEPT, CONTENT_TYPE])
+        .allow_headers([
+            AUTHORIZATION,
+            ACCEPT,
+            CONTENT_TYPE,
+            HeaderName::from_static("x-client-channel"),
+            HeaderName::from_static("x-device-id"),
+        ])
         .allow_credentials(true)
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE]);
 

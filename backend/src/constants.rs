@@ -140,3 +140,62 @@ pub enum AttendanceLeaveType {
     Sakit,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, sqlx::Type)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[sqlx(type_name = "holiday_scope", rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum HolidayScope {
+    National,
+    Satker,
+}
+
+impl FromStr for HolidayScope {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_uppercase().as_str() {
+            "NATIONAL" => Ok(HolidayScope::National),
+            "SATKER" => Ok(HolidayScope::Satker),
+            _ => Err(format!("bukan holiday scope yang valid {}", s)),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, sqlx::Type)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[sqlx(type_name = "holiday_kind", rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum HolidayKind {
+    Holiday,
+    HalfDay,
+}
+
+impl FromStr for HolidayKind {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_uppercase().as_str() {
+            "HOLIDAY" => Ok(HolidayKind::Holiday),
+            "HALF_DAY" => Ok(HolidayKind::HalfDay),
+            _ => Err(format!("bukan holiday kind yang valid {}", s)),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, sqlx::Type)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[sqlx(type_name = "calendar_day_type", rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum CalendarDayType {
+    Workday,
+    Holiday,
+    HalfDay,
+}
+
+impl FromStr for CalendarDayType {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_uppercase().as_str() {
+            "WORKDAY" => Ok(CalendarDayType::Workday),
+            "HOLIDAY" => Ok(CalendarDayType::Holiday),
+            "HALF_DAY" => Ok(CalendarDayType::HalfDay),
+            _ => Err(format!("bukan calendar day type yang valid {}", s)),
+        }
+    }
+}
+

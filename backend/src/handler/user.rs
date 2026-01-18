@@ -38,11 +38,32 @@ pub async fn create_user(
         .validate()
         .map_err(|e| HttpError::bad_request(e.to_string()))?;
 
-    let satker_id =
+    /*let satker_id =
+        Uuid::parse_str(&payload.satker_id).map_err(|e| HttpError::bad_request(e.to_string()))?;*/
+
+    let requested_satker_id =
         Uuid::parse_str(&payload.satker_id).map_err(|e| HttpError::bad_request(e.to_string()))?;
+
+    // SATKER_ADMIN can only create users for their own satker.
+    let satker_id = if user_claims.user_claims.role == crate::auth::rbac::UserRole::SatkerAdmin {
+        if user_claims.user_claims.satker_id != requested_satker_id {
+            return Err(HttpError::unauthorized("forbidden"));
+        }
+        user_claims.user_claims.satker_id
+    } else {
+        requested_satker_id
+    };
 
     let hash_password =
         hash_password(&payload.password).map_err(|e| HttpError::bad_request(e.to_string()))?;
+
+    // Default role is MEMBER if omitted
+    let target_role = payload.role.unwrap_or(crate::auth::rbac::UserRole::Member);
+
+    // SATKER_ADMIN may NOT create SATKER_ADMIN users.
+    if !user_claims.user_claims.role.can_create_user_role(target_role) {
+        return Err(HttpError::unauthorized("forbidden"));
+    }
 
     app_state
         .db_client
@@ -52,7 +73,7 @@ pub async fn create_user(
             payload.full_name,
             Some(payload.email),
             payload.phone,
-            payload.role.unwrap(),
+            target_role,
             hash_password,
         )
         .await
@@ -73,6 +94,20 @@ pub async fn update_user(
     if user_claims.user_claims.role.can_manage_satker_users() == false {
         return Err(HttpError::unauthorized("forbidden"));
     }
+
+    // SATKER_ADMIN can only update users within their satker.
+    if user_claims.user_claims.role == crate::auth::rbac::UserRole::SatkerAdmin {
+        let target = app_state
+            .db_client
+            .find_user_by_id(id)
+            .await
+            .map_err(|e| HttpError::server_error(e.to_string()))?
+            .ok_or(HttpError::bad_request("User not found"))?;
+        if target.satker_id != user_claims.user_claims.satker_id {
+            return Err(HttpError::unauthorized("forbidden"));
+        }
+    }
+
 
     app_state
         .db_client
@@ -104,6 +139,23 @@ pub async fn delete_user(
 
     if id == SUPERUSER_USER_ID {
         return Err(HttpError::bad_request("forbidden, superuser tidak boleh di hapus".to_string()));
+    }
+
+    // SATKER_ADMIN can only delete users within their satker.
+    if user_claims.user_claims.role == crate::auth::rbac::UserRole::SatkerAdmin {
+        let target = app_state
+            .db_client
+            .find_user_by_id(id)
+            .await
+            .map_err(|e| HttpError::server_error(e.to_string()))?
+            .ok_or(HttpError::bad_request("User not found"))?;
+        if target.satker_id != user_claims.user_claims.satker_id {
+            return Err(HttpError::unauthorized("forbidden"));
+        }
+        // also forbid deleting SATKER_ADMIN users from SATKER_ADMIN
+        if target.role == crate::auth::rbac::UserRole::SatkerAdmin {
+            return Err(HttpError::unauthorized("forbidden"));
+        }
     }
 
     app_state

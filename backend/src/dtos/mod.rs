@@ -13,6 +13,10 @@ pub mod attendance_session;
 pub mod attendance;
 pub mod schedule;
 pub mod upload;
+pub mod holiday;
+pub mod work_calendar;
+pub mod work_pattern;
+pub mod working_days;
 
 #[derive(Debug, Serialize)]
 pub struct SuccessResponse {
