@@ -83,6 +83,10 @@ export type TukinCalculationRow = {
   earned_credit: number
   attendance_ratio: number
   final_tukin: number
+
+  // JSON dari backend (berisi days breakdown, dll)
+  breakdown?: any
+  updated_at?: string
 }
 
 export type TukinCalculationsResp = {

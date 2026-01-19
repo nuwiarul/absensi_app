@@ -483,13 +483,32 @@ pub async fn generate_calculations(
             .await
             .map_err(|e| HttpError::server_error(e.to_string()))?;
         if !cached.is_empty() {
-            return Ok(Json(TukinCalculationsResp { status: "200", data: cached }));
+            // Smart-invalidate: jika base tukin berubah (mis. pangkat/golongan diubah),
+            // maka cache dianggap basi dan harus dihitung ulang walaupun force=false.
+            let user_ids: Vec<Uuid> = cached.iter().map(|r| r.user_id).collect();
+            let base_map = app_state
+                .db_client
+                .get_user_base_tukin_map(user_ids)
+                .await
+                .map_err(|e| HttpError::server_error(e.to_string()))?;
+
+            let mut stale = false;
+            for r in &cached {
+                let cur = base_map.get(&r.user_id).copied().unwrap_or(0);
+                if cur != r.base_tukin {
+                    stale = true;
+                    break;
+                }
+            }
+
+            if !stale {
+                return Ok(Json(TukinCalculationsResp { status: "200", data: cached }));
+            }
         }
     }
 
     let summaries = compute_tukin_summaries(query.month.clone(), query.satker_id, query.user_id, &app_state, &user_claims).await?;
 
-    let mut out = Vec::new();
     for s in summaries {
         let breakdown = json!({
             "month": s.month,
@@ -519,10 +538,17 @@ pub async fn generate_calculations(
             .await
             .map_err(|e| HttpError::server_error(e.to_string()))?;
 
-        out.push(rec);
+        let _ = rec; // upsert ok
     }
 
-    Ok(Json(TukinCalculationsResp { status: "200", data: out }))
+    // Return the (fresh) cached rows with joined fields
+    let rows = app_state
+        .db_client
+        .list_tukin_calculations(month_start, satker_id_scoped, user_id_scoped)
+        .await
+        .map_err(|e| HttpError::server_error(e.to_string()))?;
+
+    Ok(Json(TukinCalculationsResp { status: "200", data: rows }))
 }
 
 pub async fn list_policies(

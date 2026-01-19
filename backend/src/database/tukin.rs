@@ -7,8 +7,8 @@ use uuid::Uuid;
 use crate::constants::{AttendanceEventType, LeaveStatus, LeaveType};
 use crate::db::DBClient;
 use crate::dtos::tukin::{
-    CreateTukinPolicyReq, LeaveRuleInput, TukinCalculationDto, TukinLeaveRuleDto, TukinPolicyDto,
-    UpdateTukinPolicyReq,
+    CreateTukinPolicyReq, LeaveRuleInput, TukinCalculationDto, TukinCalculationRowDto,
+    TukinLeaveRuleDto, TukinPolicyDto, UpdateTukinPolicyReq,
 };
 
 #[derive(Debug, Clone, sqlx::FromRow)]
@@ -54,6 +54,7 @@ pub trait TukinRepo {
 
     // base
     async fn get_user_base_tukin(&self, user_id: Uuid) -> Result<i64, Error>;
+    async fn get_user_base_tukin_map(&self, user_ids: Vec<Uuid>) -> Result<std::collections::HashMap<Uuid, i64>, Error>;
 
     // data
     async fn list_approved_leaves_by_user(&self, user_id: Uuid, from: NaiveDate, to: NaiveDate) -> Result<Vec<LeaveSpanRow>, Error>;
@@ -74,7 +75,7 @@ pub trait TukinRepo {
 
     // cache
     async fn upsert_tukin_calculation(&self, row: TukinCalculationUpsert) -> Result<TukinCalculationDto, Error>;
-    async fn list_tukin_calculations(&self, month: NaiveDate, satker_id: Option<Uuid>, user_id: Option<Uuid>) -> Result<Vec<TukinCalculationDto>, Error>;
+    async fn list_tukin_calculations(&self, month: NaiveDate, satker_id: Option<Uuid>, user_id: Option<Uuid>) -> Result<Vec<TukinCalculationRowDto>, Error>;
 }
 
 #[async_trait]
@@ -342,6 +343,38 @@ impl TukinRepo for DBClient {
         Ok(row.tukin_base.unwrap_or(0))
     }
 
+    async fn get_user_base_tukin_map(&self, user_ids: Vec<Uuid>) -> Result<std::collections::HashMap<Uuid, i64>, Error> {
+        use std::collections::HashMap;
+
+        if user_ids.is_empty() {
+            return Ok(HashMap::new());
+        }
+
+        let rows = sqlx::query!(
+            r#"
+            SELECT u.id as "user_id!", COALESCE(r.tukin_base, 0) as tukin_base
+            FROM users u
+            LEFT JOIN ranks r ON u.rank_id = r.id
+            WHERE u.id = ANY($1)
+            "#,
+            &user_ids
+        )
+            .fetch_all(&self.pool)
+            .await?;
+
+        let mut out: HashMap<Uuid, i64> = HashMap::new();
+        for r in rows {
+            /*
+            if let Some(uid) = r.user_id {
+                out.insert(uid, r.tukin_base.unwrap_or(0));
+            }
+
+             */
+            out.insert(r.user_id, r.tukin_base.unwrap_or(0));
+        }
+        Ok(out)
+    }
+
     async fn list_approved_leaves_by_user(&self, user_id: Uuid, from: NaiveDate, to: NaiveDate) -> Result<Vec<LeaveSpanRow>, Error> {
         let rows = sqlx::query_as!(
             LeaveSpanRow,
@@ -482,29 +515,40 @@ impl TukinRepo for DBClient {
         Ok(rec)
     }
 
-    async fn list_tukin_calculations(&self, month: NaiveDate, satker_id: Option<Uuid>, user_id: Option<Uuid>) -> Result<Vec<TukinCalculationDto>, Error> {
+    async fn list_tukin_calculations(&self, month: NaiveDate, satker_id: Option<Uuid>, user_id: Option<Uuid>) -> Result<Vec<TukinCalculationRowDto>, Error> {
         let rows = sqlx::query_as!(
-            TukinCalculationDto,
+            TukinCalculationRowDto,
             r#"
             SELECT
-              id,
-              month,
-              satker_id,
-              user_id,
-              policy_id,
-              base_tukin,
-              expected_units,
-              earned_credit,
-              attendance_ratio,
-              final_tukin,
-              breakdown as "breakdown: JsonValue",
-              created_at,
-              updated_at
-            FROM tukin_calculations
-            WHERE month = $1
-              AND ($2::uuid IS NULL OR satker_id = $2)
-              AND ($3::uuid IS NULL OR user_id = $3)
-            ORDER BY final_tukin DESC, user_id ASC
+              to_char(tc.month, 'YYYY-MM') as "month!",
+              tc.satker_id,
+              s.code as satker_code,
+              s.name as satker_name,
+
+              tc.user_id,
+              u.full_name as "user_full_name!",
+              u.nrp as "user_nrp!",
+
+              r.code as rank_code,
+              r.name as rank_name,
+
+              tc.base_tukin,
+              tc.expected_units,
+              tc.earned_credit,
+              tc.attendance_ratio,
+              tc.final_tukin,
+
+              tc.breakdown as "breakdown: JsonValue",
+
+              tc.updated_at
+            FROM tukin_calculations tc
+            JOIN users u ON u.id = tc.user_id
+            JOIN satkers s ON s.id = tc.satker_id
+            LEFT JOIN ranks r ON r.id = u.rank_id
+            WHERE tc.month = $1
+              AND ($2::uuid IS NULL OR tc.satker_id = $2)
+              AND ($3::uuid IS NULL OR tc.user_id = $3)
+            ORDER BY tc.final_tukin DESC, tc.user_id ASC
             "#,
             month,
             satker_id,

@@ -18,6 +18,7 @@ import LeaveRequestsPage from "@/pages/LeaveRequestsPage"
 import DutySchedulesPage from "@/pages/DutySchedulesPage"
 import TukinCalculationsPage from "@/pages/TukinCalculationsPage"
 import TukinPolicyPage from "@/pages/TukinPolicyPage"
+import TukinCalculationDetailPage from "@/pages/TukinCalculationDetailPage"
 //import WorkPatternsPage from "@/pages/WorkPatternsPage"*/
 
 export const router = createBrowserRouter([
@@ -43,6 +44,7 @@ export const router = createBrowserRouter([
                     { path: "/holidays", element: <HolidaysBulkPage /> },
                     { path: "/duty-schedules", element: <DutySchedulesPage /> },
                     { path: "/tukin/calculations", element: <TukinCalculationsPage /> },
+                    { path: "/tukin/calculations/detail", element: <TukinCalculationDetailPage  /> },
                     { path: "/tukin/policies", element: <TukinPolicyPage /> },
                     { path: "/ranks", element: <RanksPage /> },
                     { path: "/settings", element: <SettingsPage /> },
