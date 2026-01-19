@@ -30,6 +30,23 @@ pub trait AttendanceSessionRepo {
         &self,
         session_id: Uuid,
     ) -> Result<RowAttendanceSession, Error>;
+
+    /// SUPERADMIN only: overwrite check-in/out timestamps and mark as manual correction.
+    async fn admin_set_attendance_session(
+        &self,
+        session_id: Uuid,
+        check_in_at: Option<DateTime<Utc>>,
+        check_out_at: Option<DateTime<Utc>>,
+        manual_note: &str,
+        updated_by: Uuid,
+    ) -> Result<(), Error>;
+
+    /// Delete a session (cascade deletes events) by user + work_date.
+    async fn delete_attendance_session_by_user_date(
+        &self,
+        user_id: Uuid,
+        work_date: NaiveDate,
+    ) -> Result<u64, Error>;
 }
 
 #[async_trait]
@@ -119,5 +136,55 @@ impl AttendanceSessionRepo for DBClient {
             .await?;
 
         Ok(row)
+    }
+
+    async fn admin_set_attendance_session(
+        &self,
+        session_id: Uuid,
+        check_in_at: Option<DateTime<Utc>>,
+        check_out_at: Option<DateTime<Utc>>,
+        manual_note: &str,
+        updated_by: Uuid,
+    ) -> Result<(), Error> {
+        sqlx::query!(
+            r#"
+            UPDATE attendance_sessions
+            SET
+              check_in_at = $2,
+              check_out_at = $3,
+              status = CASE WHEN $3::timestamptz IS NULL THEN 'OPEN' ELSE 'CLOSED' END,
+              is_manual = TRUE,
+              manual_note = $4,
+              manual_updated_by = $5,
+              manual_updated_at = NOW(),
+              updated_at = NOW()
+            WHERE id = $1
+            "#,
+            session_id,
+            check_in_at,
+            check_out_at,
+            manual_note,
+            updated_by
+        )
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    async fn delete_attendance_session_by_user_date(
+        &self,
+        user_id: Uuid,
+        work_date: NaiveDate,
+    ) -> Result<u64, Error> {
+        let res = sqlx::query!(
+            r#"DELETE FROM attendance_sessions WHERE user_id = $1 AND work_date = $2"#,
+            user_id,
+            work_date
+        )
+            .execute(&self.pool)
+            .await?;
+
+        Ok(res.rows_affected())
     }
 }

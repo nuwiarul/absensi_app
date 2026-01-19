@@ -8,6 +8,7 @@ use uuid::Uuid;
 pub struct User {
     pub id: Uuid,
     pub satker_id: Uuid,
+    pub rank_id: Option<Uuid>,
     pub nrp: String,
     pub full_name: String,
     pub email: Option<String>,
@@ -17,6 +18,17 @@ pub struct User {
     pub is_active: bool,
     pub face_template_version: i32,
     pub face_template_hash: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Deserialize, Serialize, sqlx::FromRow, Clone)]
+pub struct Rank {
+    pub id: Uuid,
+    pub code: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub tukin_base: i64,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }

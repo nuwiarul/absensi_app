@@ -60,6 +60,13 @@ pub trait AttendanceEventRepo {
     ) -> Result<Vec<AttendanceRekapDto>, Error>;
 
 
+    /// Delete an attendance event (CHECK_IN / CHECK_OUT) by session and type.
+    async fn delete_attendance_event_by_session_type(
+        &self,
+        session_id: Uuid,
+        event_type: AttendanceEventType,
+    ) -> Result<u64, Error>;
+
 }
 
 #[async_trait]
@@ -197,7 +204,11 @@ impl AttendanceEventRepo for DBClient {
                 ci.device_model AS "check_in_device_model?",
                 co.device_model AS "check_out_device_model?",
                 ui.full_name AS "check_in_device_name?",
-                uo.full_name AS "check_out_device_name?"
+                uo.full_name AS "check_out_device_name?",
+
+                s.is_manual AS "is_manual?",
+                s.manual_note AS "manual_note?",
+                s.manual_updated_at AS "manual_updated_at?"
             FROM attendance_sessions s
             JOIN users u ON s.user_id=u.id
             JOIN satkers st ON s.satker_id=st.id
@@ -260,7 +271,11 @@ impl AttendanceEventRepo for DBClient {
                 ci.device_model AS "check_in_device_model?",
                 co.device_model AS "check_out_device_model?",
                 ui.full_name AS "check_in_device_name?",
-                uo.full_name AS "check_out_device_name?"
+                uo.full_name AS "check_out_device_name?",
+
+                s.is_manual AS "is_manual?",
+                s.manual_note AS "manual_note?",
+                s.manual_updated_at AS "manual_updated_at?"
             FROM attendance_sessions s
             JOIN users u ON s.user_id=u.id
             JOIN satkers st ON s.satker_id=st.id
@@ -281,5 +296,21 @@ impl AttendanceEventRepo for DBClient {
         ).fetch_all(&self.pool)
             .await?;
         Ok(rows)
+    }
+
+    async fn delete_attendance_event_by_session_type(
+        &self,
+        session_id: Uuid,
+        event_type: AttendanceEventType,
+    ) -> Result<u64, Error> {
+        let res = sqlx::query!(
+            r#"DELETE FROM attendance_events WHERE session_id = $1 AND event_type = $2"#,
+            session_id,
+            event_type as AttendanceEventType,
+        )
+            .execute(&self.pool)
+            .await?;
+
+        Ok(res.rows_affected())
     }
 }

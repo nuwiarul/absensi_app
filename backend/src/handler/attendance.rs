@@ -22,6 +22,7 @@ use chrono_tz::Asia::Jakarta;
 use crate::auth::rbac::UserRole;
 use crate::database::schedule::ScheduleRepo;
 use crate::dtos::schedule::{can_manage_schedule, ScheduleQuery, SchedulesResp};
+use crate::handler::attendance_admin::attendance_admin_handler;
 use crate::utils::timezone_cache::get_timezone_cached;
 
 pub fn attendance_handler() -> Router {
@@ -30,6 +31,7 @@ pub fn attendance_handler() -> Router {
         .route("/check-out", post(check_out))
         .route("/get", get(find_attendance))
         .route("/list", get(list_attendances))
+        .nest("/admin", attendance_admin_handler())
 }
 
 async fn nearest_geofence(

@@ -9,10 +9,13 @@ const ALL: (NavItem & { roles: Role[] })[] = [
     { label: "User", to: "/users", roles: ["SUPERADMIN", "SATKER_ADMIN"] },
     { label: "Satker Head", to: "/satker-heads", roles: ["SUPERADMIN", "SATKER_ADMIN"] },
     { label: "Geofence", to: "/geofences", roles: ["SUPERADMIN", "SATKER_ADMIN"] },
+    { label: "Pangkat/Golongan", to: "/ranks", roles: ["SUPERADMIN", "SATKER_ADMIN"] },
     { label: "Work Patterns", to: "/work-patterns", roles: ["SUPERADMIN", "SATKER_ADMIN"] },
     { label: "Holidays", to: "/holidays", roles: ["SUPERADMIN", "SATKER_ADMIN"] },
     { label: "Generate Calendar", to: "/calendar-generate", roles: ["SUPERADMIN", "SATKER_ADMIN"] },
     { label: "Calendar Result", to: "/calendar/result", roles: ["SUPERADMIN", "SATKER_ADMIN"] },
+    { label: "Edit Absensi", to: "/attendance/manage", roles: ["SUPERADMIN"] },
+    { label: "Rekap Absensi", to: "/attendance/recap", roles: ["SUPERADMIN", "SATKER_ADMIN", "SATKER_HEAD"] },
     { label: "Settings", to: "/settings", roles: ["SUPERADMIN"] },
 ]
 

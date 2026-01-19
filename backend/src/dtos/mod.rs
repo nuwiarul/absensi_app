@@ -18,6 +18,8 @@ pub mod work_calendar;
 pub mod work_pattern;
 pub mod working_days;
 pub mod settings;
+pub mod rank;
+pub mod attendance_admin;
 
 #[derive(Debug, Serialize)]
 pub struct SuccessResponse {

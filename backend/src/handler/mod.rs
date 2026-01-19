@@ -12,3 +12,5 @@ pub mod files;
 pub mod holiday;
 pub mod working_days;
 pub mod settings;
+pub mod rank;
+pub mod attendance_admin;

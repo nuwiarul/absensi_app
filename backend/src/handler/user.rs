@@ -44,6 +44,11 @@ pub async fn create_user(
     let requested_satker_id =
         Uuid::parse_str(&payload.satker_id).map_err(|e| HttpError::bad_request(e.to_string()))?;
 
+    let rank_id: Option<Uuid> = match payload.rank_id.as_deref() {
+        None | Some("") => None,
+        Some(v) => Some(Uuid::parse_str(v).map_err(|e| HttpError::bad_request(e.to_string()))?),
+    };
+
     // SATKER_ADMIN can only create users for their own satker.
     let satker_id = if user_claims.user_claims.role == crate::auth::rbac::UserRole::SatkerAdmin {
         if user_claims.user_claims.satker_id != requested_satker_id {
@@ -69,6 +74,7 @@ pub async fn create_user(
         .db_client
         .create_user(
             satker_id,
+            rank_id,
             payload.nrp,
             payload.full_name,
             Some(payload.email),
@@ -114,6 +120,7 @@ pub async fn update_user(
         .update_user(
             id,
             payload.satker_id,
+            payload.rank_id,
             payload.nrp,
             payload.full_name,
             payload.email,

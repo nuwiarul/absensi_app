@@ -88,6 +88,11 @@ pub struct AttendanceRekapDto {
     pub check_out_device_model: Option<String>,
     pub check_in_device_name: Option<String>,
     pub check_out_device_name: Option<String>,
+
+    // Manual correction (oleh SUPERADMIN)
+    pub is_manual: Option<bool>,
+    pub manual_note: Option<String>,
+    pub manual_updated_at: Option<DateTime<Utc>>,
 }
 
 pub fn validate_attendance_query(req: &AttendanceRekapDtoQuery) -> Result<(), ValidationError> {

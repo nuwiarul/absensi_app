@@ -19,6 +19,8 @@ pub struct CreateUserReq {
     )]
     pub email: String,
     pub phone: Option<String>,
+    /// Optional: pangkat/golongan
+    pub rank_id: Option<String>,
     pub role: Option<UserRole>,
     #[validate(length(
         min = 8,
@@ -41,6 +43,7 @@ pub struct CreateUserReq {
 pub struct UpdateUserReq {
     pub satker_id: Option<Uuid>,
     pub nrp: Option<String>,
+    pub rank_id: Option<Uuid>,
     pub full_name: Option<String>,
     pub email: Option<String>,
     pub phone: Option<String>,
@@ -50,6 +53,7 @@ pub struct UpdateUserReq {
 pub struct UserDto {
     pub id: Uuid,
     pub satker: SatkerDto,
+    pub rank_id: Option<Uuid>,
     pub nrp: String,
     pub full_name: String,
     pub email: Option<String>,
@@ -64,6 +68,7 @@ impl UserDto {
         UserDto {
             id: row.id,
             satker: satker.clone(),
+            rank_id: row.rank_id,
             nrp: row.nrp.clone(),
             full_name: row.full_name.clone(),
             email: row.email.clone(),
@@ -83,6 +88,7 @@ impl UserDto {
         UserDto {
             id: row.id,
             satker: satker_dto.clone(),
+            rank_id: row.rank_id,
             nrp: row.nrp.clone(),
             full_name: row.full_name.clone(),
             email: row.email.clone(),

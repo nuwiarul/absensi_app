@@ -19,6 +19,7 @@ export type SatkerLite = {
 export type User = {
     id: string
     satker: SatkerLite
+    rank_id?: string | null
     nrp: string
     full_name: string
     email: string
@@ -29,6 +30,7 @@ export type User = {
 
 export type CreateUserReq = {
     satker_id: string
+    rank_id?: string | null
     nrp: string
     full_name: string
     email: string
@@ -40,6 +42,7 @@ export type CreateUserReq = {
 
 export type UpdateUserReq = {
     satker_id?: string
+    rank_id?: string | null
     nrp?: string
     full_name?: string
     email?: string

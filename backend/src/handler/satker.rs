@@ -15,7 +15,6 @@ use validator::Validate;
 use crate::constants::SUPERUSER_SATKER_ID;
 use crate::database::holiday::HolidayRepo;
 use crate::database::work_calendar::WorkCalendarRepo;
-use crate::database::settings::SettingsRepo;
 use crate::database::work_pattern::{WorkPatternRepo, pick_effective_pattern, WorkPatternUpsert};
 use crate::dtos::work_calendar::{GenerateCalendarQuery, GenerateCalendarResp, GenerateCalendarRespData};
 use crate::dtos::work_calendar::{ListCalendarQuery, ListCalendarResp};
@@ -354,28 +353,25 @@ pub async fn generate_calendar(
         return Err(HttpError::bad_request("to: harus >= from"));
     }
 
-    // Constraint: range must be within current year (operational timezone from settings).
-    {
-        use chrono::{Datelike, Utc};
-        use chrono_tz::Tz;
-        use std::str::FromStr;
-
-        let tz_value = app_state
-            .db_client
-            .get_timezone_value()
-            .await
-            .map_err(|e| HttpError::server_error(e.to_string()))?;
-
-        let tz: Tz = Tz::from_str(&tz_value).unwrap_or(chrono_tz::Asia::Jakarta);
-        let now_local = Utc::now().with_timezone(&tz);
-        let cur_year = now_local.year();
-        if q.from.year() != cur_year || q.to.year() != cur_year {
-            return Err(HttpError::bad_request(format!(
-                "range harus dalam tahun berjalan ({})",
-                cur_year
-            )));
+    // Constraint: generation should be done for a full year (so admin doesn't need to generate monthly).
+    // Allowed for any year (including next year).
+    /*{
+        use chrono::Datelike;
+        let y_from = q.from.year();
+        let y_to = q.to.year();
+        if y_from != y_to {
+            return Err(HttpError::bad_request("range harus dalam 1 tahun yang sama"));
         }
-    }
+        let is_full_year = q.from.month() == 1
+            && q.from.day() == 1
+            && q.to.month() == 12
+            && q.to.day() == 31;
+        if !is_full_year {
+            return Err(HttpError::bad_request(
+                "range harus 1 tahun penuh: 01-01 s/d 12-31",
+            ));
+        }
+    }*/
 
     // Guard: do not generate absurdly large ranges
     let max_days: i64 = 370;
@@ -408,13 +404,13 @@ pub async fn generate_calendar(
     let mut holiday_by_date: std::collections::HashMap<NaiveDate, crate::models::Holiday> =
         std::collections::HashMap::new();
     for h in holidays {
-        // Precedence: NATIONAL always applies to all satker.
-        // SATKER holidays are additive; if there is a clash on the same date,
-        // keep NATIONAL (do not allow SATKER to override).
+        // If there are both NATIONAL and SATKER on same date, SATKER should win.
         let replace = match holiday_by_date.get(&h.holiday_date) {
             None => true,
-            Some(existing) => existing.scope != crate::constants::HolidayScope::National
-                && h.scope == crate::constants::HolidayScope::National,
+            Some(existing) => {
+                existing.scope == crate::constants::HolidayScope::National
+                    && h.scope == crate::constants::HolidayScope::Satker
+            }
         };
         if replace {
             holiday_by_date.insert(h.holiday_date, h);

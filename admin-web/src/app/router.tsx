@@ -11,6 +11,9 @@ import CalendarGeneratePage from "@/pages/CalendarGeneratePage"
 import CalendarResultPage from "@/pages/CalendarResultPage"
 import HolidaysBulkPage from "@/pages/HolidaysBulkPage"
 import SettingsPage from "@/pages/SettingsPage"
+import RanksPage from "@/pages/RanksPage"
+import AttendanceRecapPage from "@/pages/AttendanceRecapPage"
+import AttendanceManagePage from "@/pages/AttendanceManagePage"
 //import WorkPatternsPage from "@/pages/WorkPatternsPage"*/
 
 export const router = createBrowserRouter([
@@ -30,7 +33,10 @@ export const router = createBrowserRouter([
                     { path: "/work-patterns", element: <WorkPatternsPage /> },
                     { path: "/calendar-generate", element: <CalendarGeneratePage /> },
                     { path: "/calendar/result", element: <CalendarResultPage /> },
+                    { path: "/attendance/recap", element: <AttendanceRecapPage /> },
+                    { path: "/attendance/manage", element: <AttendanceManagePage /> },
                     { path: "/holidays", element: <HolidaysBulkPage /> },
+                    { path: "/ranks", element: <RanksPage /> },
                     { path: "/settings", element: <SettingsPage /> },
                     /*{ path: "/working-days", element: <WorkPatternsPage /> },*/
                 ],
