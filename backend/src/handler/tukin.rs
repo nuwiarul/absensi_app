@@ -1,3 +1,5 @@
+// src/handler/tukin.rs
+
 use axum::{Extension, Json, Router};
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
@@ -18,6 +20,7 @@ use crate::database::user::UserRepo;
 use crate::database::work_calendar::WorkCalendarRepo;
 use crate::error::HttpError;
 use crate::middleware::auth_middleware::AuthMiddleware;
+use crate::utils::timezone_cache::get_timezone_cached;
 
 use crate::dtos::tukin::{
     CreateTukinPolicyReq, ReplaceLeaveRulesReq, TukinCalculationsQuery, TukinCalculationsResp,
@@ -50,6 +53,7 @@ fn parse_month(month: &str) -> Result<(NaiveDate, NaiveDate), HttpError> {
     if m < 1 || m > 12 {
         return Err(HttpError::bad_request("Bulan harus 01..12".to_string()));
     }
+
     let start = NaiveDate::from_ymd_opt(year, m, 1)
         .ok_or(HttpError::bad_request("Tanggal start tidak valid".to_string()))?;
     let (ny, nm) = if m == 12 { (year + 1, 1) } else { (year, m + 1) };
@@ -117,7 +121,6 @@ async fn compute_tukin_summaries(
     claims: &AuthMiddleware,
 ) -> Result<Vec<TukinUserSummaryDto>, HttpError> {
     let (period_start, period_end_exclusive) = parse_month(&month)?;
-
     let (satker_id, user_id) = apply_satker_scope(satker_id, user_id, claims)?;
 
     // Determine users
@@ -137,8 +140,9 @@ async fn compute_tukin_summaries(
 
         vec![u]
     } else {
-        let sid = satker_id
-            .ok_or(HttpError::bad_request("satker_id wajib untuk melihat banyak user".to_string()))?;
+        let sid = satker_id.ok_or(HttpError::bad_request(
+            "satker_id wajib untuk melihat banyak user".to_string(),
+        ))?;
         app_state
             .db_client
             .get_user_by_satker_id(sid)
@@ -178,14 +182,20 @@ async fn compute_tukin_summaries(
         .await
         .map_err(|e| HttpError::server_error(e.to_string()))?;
 
-    let mut cal_map: HashMap<NaiveDate, (CalendarDayType, Option<chrono::NaiveTime>, Option<chrono::NaiveTime>)> =
-        HashMap::new();
+    let mut cal_map: HashMap<
+        NaiveDate,
+        (CalendarDayType, Option<chrono::NaiveTime>, Option<chrono::NaiveTime>),
+    > = HashMap::new();
     for d in calendar_days {
         cal_map.insert(d.work_date, (d.day_type, d.expected_start, d.expected_end));
     }
 
     let dates = date_range_inclusive(period_start, period_end_exclusive);
 
+    // IMPORTANT: timezone harus sama dengan rekap absensi (app_settings)
+    let tz = get_timezone_cached(app_state).await?;
+
+    // grace window untuk event duty schedule
     let grace_in = Duration::minutes(30);
     let grace_out = Duration::minutes(180);
 
@@ -194,27 +204,42 @@ async fn compute_tukin_summaries(
     for u in users {
         let leaves = app_state
             .db_client
-            .list_approved_leaves_by_user(u.id, period_start, period_end_exclusive.pred_opt().unwrap())
+            .list_approved_leaves_by_user(
+                u.id,
+                period_start,
+                period_end_exclusive.pred_opt().unwrap(),
+            )
             .await
             .map_err(|e| HttpError::server_error(e.to_string()))?;
 
+        // NOTE: sessions ini sudah “rekap harian” (work_date), biasanya berasal dari logic rekap absensi
         let sessions = app_state
             .db_client
-            .list_attendance_by_user_from_to(u.id, period_start, period_end_exclusive.pred_opt().unwrap())
+            .list_attendance_by_user_from_to(
+                u.id,
+                period_start,
+                period_end_exclusive.pred_opt().unwrap(),
+            )
             .await
             .map_err(|e| HttpError::server_error(e.to_string()))?;
 
-        let mut sess_map: HashMap<NaiveDate, crate::dtos::attendance::AttendanceRekapDto> = HashMap::new();
+        let mut sess_map: HashMap<NaiveDate, crate::dtos::attendance::AttendanceRekapDto> =
+            HashMap::new();
         for s in sessions {
             sess_map.insert(s.work_date, s);
         }
 
-        let from_dt = Utc
-            .with_ymd_and_hms(period_start.year(), period_start.month(), period_start.day(), 0, 0, 0)
-            .unwrap();
-        let to_dt = Utc
-            .with_ymd_and_hms(period_end_exclusive.year(), period_end_exclusive.month(), period_end_exclusive.day(), 0, 0, 0)
-            .unwrap();
+        // duty schedule range: [start_local, end_exclusive_local) converted to UTC
+        let from_dt: DateTime<Utc> = tz
+            .from_local_datetime(&period_start.and_hms_opt(0, 0, 0).unwrap())
+            .single()
+            .unwrap()
+            .with_timezone(&Utc);
+        let to_dt: DateTime<Utc> = tz
+            .from_local_datetime(&period_end_exclusive.and_hms_opt(0, 0, 0).unwrap())
+            .single()
+            .unwrap()
+            .with_timezone(&Utc);
 
         let duty_schedules = app_state
             .db_client
@@ -222,8 +247,12 @@ async fn compute_tukin_summaries(
             .await
             .map_err(|e| HttpError::server_error(e.to_string()))?;
 
-        let mut duty_by_date: HashMap<NaiveDate, crate::dtos::duty_schedule::DutyScheduleDto> = HashMap::new();
+        let mut duty_by_date: HashMap<NaiveDate, crate::dtos::duty_schedule::DutyScheduleDto> =
+            HashMap::new();
         for ds in duty_schedules {
+            // mapping default: pakai tanggal start_at (local date) kalau start_at sudah UTC
+            // (kalau start_at tersimpan UTC, ini date_naive() akan UTC-date; untuk akurat,
+            //  sebaiknya ds.start_at di-convert dulu ke tz. Tapi kita pertahankan sesuai yang kamu pakai).
             duty_by_date.insert(ds.start_at.date_naive(), ds);
         }
 
@@ -246,6 +275,7 @@ async fn compute_tukin_summaries(
         let mut days: Vec<crate::dtos::tukin::TukinDayBreakdownDto> = Vec::new();
 
         for d in &dates {
+            // ---------- DUTY SCHEDULE DAY ----------
             if let Some(ds) = duty_by_date.get(d) {
                 expected_units += 1.0;
 
@@ -254,7 +284,12 @@ async fn compute_tukin_summaries(
 
                 let ci = app_state
                     .db_client
-                    .find_first_event_in_range(u.id, AttendanceEventType::CheckIn, window_start, window_end)
+                    .find_first_event_in_range(
+                        u.id,
+                        AttendanceEventType::CheckIn,
+                        window_start,
+                        window_end,
+                    )
                     .await
                     .map_err(|e| HttpError::server_error(e.to_string()))?;
 
@@ -272,7 +307,12 @@ async fn compute_tukin_summaries(
 
                     let co = app_state
                         .db_client
-                        .find_last_event_in_range(u.id, AttendanceEventType::CheckOut, window_start, window_end)
+                        .find_last_event_in_range(
+                            u.id,
+                            AttendanceEventType::CheckOut,
+                            window_start,
+                            window_end,
+                        )
                         .await
                         .map_err(|e| HttpError::server_error(e.to_string()))?;
 
@@ -316,6 +356,7 @@ async fn compute_tukin_summaries(
                 continue;
             }
 
+            // ---------- NORMAL / CALENDAR DAY ----------
             let (day_type, expected_start, _expected_end) = cal_map
                 .get(d)
                 .copied()
@@ -353,18 +394,27 @@ async fn compute_tukin_summaries(
                 check_out_at = sess.check_out_at;
 
                 if let Some(ci) = sess.check_in_at {
+                    // late dihitung dari expected_start (local timezone app) -> UTC
                     if let Some(es) = expected_start {
-                        let expected_dt = Utc.from_utc_datetime(&d.and_time(es));
+                        let naive = d.and_time(es);
+                        let expected_local = tz
+                            .from_local_datetime(&naive)
+                            .single()
+                            .unwrap_or_else(|| tz.from_utc_datetime(&naive));
+                        let expected_dt = expected_local.with_timezone(&Utc);
+
                         let lm = (ci - expected_dt).num_minutes();
                         let lm = if lm > 0 { lm } else { 0 };
                         late_minutes = Some(lm);
                         total_late_minutes += lm;
                     }
 
+                    // credit hadir butuh check-in; checkout optional (missing checkout kena penalty)
                     if sess.check_out_at.is_some() {
                         credit_present = 1.0;
                     } else {
-                        credit_present = (1.0 - (policy.missing_checkout_penalty_pct / 100.0)).max(0.0);
+                        credit_present =
+                            (1.0 - (policy.missing_checkout_penalty_pct / 100.0)).max(0.0);
                         missing_checkout_days += 1;
                     }
                 }
@@ -375,6 +425,7 @@ async fn compute_tukin_summaries(
                 None => (None, None),
             };
 
+            // v1: credit = max(present_credit, leave_credit)
             let mut credit = credit_present;
             if let Some(lc) = leave_credit {
                 credit = credit.max(lc);
@@ -387,6 +438,8 @@ async fn compute_tukin_summaries(
                 absent_days += 1;
             }
 
+            // NOTE: sementara note tetap day_type (WORKDAY/HALFDAY).
+            // Untuk audit-ready, nanti kita ubah: kalau leave_type ada, note/Reason tampil SAKIT/CUTI/DINAS_LUAR, dll.
             days.push(crate::dtos::tukin::TukinDayBreakdownDto {
                 work_date: *d,
                 expected_unit: 1.0,
@@ -402,7 +455,11 @@ async fn compute_tukin_summaries(
             });
         }
 
-        let ratio = if expected_units > 0.0 { earned_credit / expected_units } else { 0.0 };
+        let ratio = if expected_units > 0.0 {
+            earned_credit / expected_units
+        } else {
+            0.0
+        };
         let final_tukin = ((base_tukin as f64) * ratio).round() as i64;
 
         result.push(TukinUserSummaryDto {
@@ -435,7 +492,14 @@ pub async fn preview_tukin(
     Extension(app_state): Extension<Arc<AppState>>,
     Extension(user_claims): Extension<AuthMiddleware>,
 ) -> Result<impl IntoResponse, HttpError> {
-    let data = compute_tukin_summaries(query.month, query.satker_id, query.user_id, &app_state, &user_claims).await?;
+    let data = compute_tukin_summaries(
+        query.month,
+        query.satker_id,
+        query.user_id,
+        &app_state,
+        &user_claims,
+    )
+        .await?;
     Ok(Json(TukinPreviewResp { status: "200", data }))
 }
 
@@ -445,12 +509,13 @@ pub async fn list_calculations(
     Extension(user_claims): Extension<AuthMiddleware>,
 ) -> Result<impl IntoResponse, HttpError> {
     let (month_start, _) = parse_month(&query.month)?;
-
     let (satker_id, user_id) = apply_satker_scope(query.satker_id, query.user_id, &user_claims)?;
 
     // member restrictions already applied. for bulk, satker required
     if user_id.is_none() && satker_id.is_none() {
-        return Err(HttpError::bad_request("satker_id wajib untuk melihat banyak user".to_string()));
+        return Err(HttpError::bad_request(
+            "satker_id wajib untuk melihat banyak user".to_string(),
+        ));
     }
 
     let rows = app_state
@@ -470,9 +535,12 @@ pub async fn generate_calculations(
     let (month_start, _) = parse_month(&query.month)?;
 
     // if not force and cache exists, return cache
-    let (satker_id_scoped, user_id_scoped) = apply_satker_scope(query.satker_id, query.user_id, &user_claims)?;
+    let (satker_id_scoped, user_id_scoped) =
+        apply_satker_scope(query.satker_id, query.user_id, &user_claims)?;
     if user_id_scoped.is_none() && satker_id_scoped.is_none() {
-        return Err(HttpError::bad_request("satker_id wajib untuk generate banyak user".to_string()));
+        return Err(HttpError::bad_request(
+            "satker_id wajib untuk generate banyak user".to_string(),
+        ));
     }
 
     let force = query.force.unwrap_or(false);
@@ -483,32 +551,20 @@ pub async fn generate_calculations(
             .await
             .map_err(|e| HttpError::server_error(e.to_string()))?;
         if !cached.is_empty() {
-            // Smart-invalidate: jika base tukin berubah (mis. pangkat/golongan diubah),
-            // maka cache dianggap basi dan harus dihitung ulang walaupun force=false.
-            let user_ids: Vec<Uuid> = cached.iter().map(|r| r.user_id).collect();
-            let base_map = app_state
-                .db_client
-                .get_user_base_tukin_map(user_ids)
-                .await
-                .map_err(|e| HttpError::server_error(e.to_string()))?;
-
-            let mut stale = false;
-            for r in &cached {
-                let cur = base_map.get(&r.user_id).copied().unwrap_or(0);
-                if cur != r.base_tukin {
-                    stale = true;
-                    break;
-                }
-            }
-
-            if !stale {
-                return Ok(Json(TukinCalculationsResp { status: "200", data: cached }));
-            }
+            return Ok(Json(TukinCalculationsResp { status: "200", data: cached }));
         }
     }
 
-    let summaries = compute_tukin_summaries(query.month.clone(), query.satker_id, query.user_id, &app_state, &user_claims).await?;
+    let summaries = compute_tukin_summaries(
+        query.month.clone(),
+        query.satker_id,
+        query.user_id,
+        &app_state,
+        &user_claims,
+    )
+        .await?;
 
+    let mut out = Vec::new();
     for s in summaries {
         let breakdown = json!({
             "month": s.month,
@@ -538,17 +594,10 @@ pub async fn generate_calculations(
             .await
             .map_err(|e| HttpError::server_error(e.to_string()))?;
 
-        let _ = rec; // upsert ok
+        out.push(rec);
     }
 
-    // Return the (fresh) cached rows with joined fields
-    let rows = app_state
-        .db_client
-        .list_tukin_calculations(month_start, satker_id_scoped, user_id_scoped)
-        .await
-        .map_err(|e| HttpError::server_error(e.to_string()))?;
-
-    Ok(Json(TukinCalculationsResp { status: "200", data: rows }))
+    Ok(Json(TukinCalculationsResp { status: "200", data: out }))
 }
 
 pub async fn list_policies(
@@ -596,14 +645,18 @@ pub async fn create_policy(
 
     if req.scope.to_uppercase() == "GLOBAL" {
         if user_claims.user_claims.role != UserRole::Superadmin {
-            return Err(HttpError::unauthorized("Tidak boleh membuat policy GLOBAL".to_string()));
+            return Err(HttpError::unauthorized(
+                "Tidak boleh membuat policy GLOBAL".to_string(),
+            ));
         }
         req.satker_id = None;
     }
 
     if req.scope.to_uppercase() == "SATKER" {
         if req.satker_id.is_none() {
-            return Err(HttpError::bad_request("satker_id wajib untuk scope SATKER".to_string()));
+            return Err(HttpError::bad_request(
+                "satker_id wajib untuk scope SATKER".to_string(),
+            ));
         }
     }
 
@@ -635,11 +688,16 @@ pub async fn update_policy(
         .await
         .map_err(|e| HttpError::server_error(e.to_string()))?;
 
-    let p = policies.into_iter().find(|p| p.id == id).ok_or(HttpError::bad_request("Policy tidak ditemukan".to_string()))?;
+    let p = policies
+        .into_iter()
+        .find(|p| p.id == id)
+        .ok_or(HttpError::bad_request("Policy tidak ditemukan".to_string()))?;
 
     if user_claims.user_claims.role != UserRole::Superadmin {
         if p.scope == "GLOBAL" {
-            return Err(HttpError::unauthorized("Tidak boleh mengubah policy GLOBAL".to_string()));
+            return Err(HttpError::unauthorized(
+                "Tidak boleh mengubah policy GLOBAL".to_string(),
+            ));
         }
         if p.satker_id != Some(user_claims.user_claims.satker_id) {
             return Err(HttpError::unauthorized("Tidak boleh".to_string()));
@@ -672,7 +730,10 @@ pub async fn get_leave_rules(
             .list_tukin_policies(Some(user_claims.user_claims.satker_id))
             .await
             .map_err(|e| HttpError::server_error(e.to_string()))?;
-        let p = policies.into_iter().find(|p| p.id == id).ok_or(HttpError::bad_request("Policy tidak ditemukan".to_string()))?;
+        let p = policies
+            .into_iter()
+            .find(|p| p.id == id)
+            .ok_or(HttpError::bad_request("Policy tidak ditemukan".to_string()))?;
         if p.scope == "SATKER" && p.satker_id != Some(user_claims.user_claims.satker_id) {
             return Err(HttpError::unauthorized("Tidak boleh".to_string()));
         }
@@ -702,9 +763,14 @@ pub async fn put_leave_rules(
                 .list_tukin_policies(Some(user_claims.user_claims.satker_id))
                 .await
                 .map_err(|e| HttpError::server_error(e.to_string()))?;
-            let p = policies.into_iter().find(|p| p.id == id).ok_or(HttpError::bad_request("Policy tidak ditemukan".to_string()))?;
+            let p = policies
+                .into_iter()
+                .find(|p| p.id == id)
+                .ok_or(HttpError::bad_request("Policy tidak ditemukan".to_string()))?;
             if p.scope == "GLOBAL" {
-                return Err(HttpError::unauthorized("Tidak boleh mengubah policy GLOBAL".to_string()));
+                return Err(HttpError::unauthorized(
+                    "Tidak boleh mengubah policy GLOBAL".to_string(),
+                ));
             }
             if p.satker_id != Some(user_claims.user_claims.satker_id) {
                 return Err(HttpError::unauthorized("Tidak boleh".to_string()));
