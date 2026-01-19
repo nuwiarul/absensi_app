@@ -40,7 +40,7 @@ impl UserRole {
     }
 
     pub fn can_approve_leave(&self) -> bool {
-        matches!(self, UserRole::Superadmin | UserRole::SatkerHead)
+        matches!(self, UserRole::Superadmin | UserRole::SatkerHead | UserRole::SatkerAdmin)
     }
 
     pub fn can_view_leave(&self) -> bool {

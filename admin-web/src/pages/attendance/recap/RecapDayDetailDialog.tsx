@@ -4,6 +4,32 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 
+function timeStrToMinutes(s?: string | null): number | null {
+  if (!s) return null
+  const m = /^([0-2]\d):([0-5]\d)/.exec(s)
+  if (!m) return null
+  return Number(m[1]) * 60 + Number(m[2])
+}
+
+function isoUtcToMinutesInTz(isoUtc?: string | null, tz?: string): number | null {
+  if (!isoUtc || !tz) return null
+  try {
+    const d = new Date(isoUtc)
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: tz,
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).formatToParts(d)
+    const hh = parts.find((p) => p.type === "hour")?.value
+    const mm = parts.find((p) => p.type === "minute")?.value
+    if (!hh || !mm) return null
+    return Number(hh) * 60 + Number(mm)
+  } catch {
+    return null
+  }
+}
+
 export type RecapDayDetailDialogProps = {
   open: boolean
   onOpenChange: (v: boolean) => void
@@ -67,6 +93,19 @@ export function RecapDayDetailDialog(props: RecapDayDetailDialogProps) {
               <div className="rounded-md border p-3">
                 <div className="text-xs text-muted-foreground">Check In</div>
                 <div className="mt-1 text-sm font-medium">{fmtClock(selectedDayRow?.check_in_at, tz) || "—"}</div>
+
+                {(() => {
+                  const expectedMin = timeStrToMinutes(selectedDayRow?.expected_start)
+                  const inMin = isoUtcToMinutesInTz(selectedDayRow?.check_in_at, tz)
+                  if (expectedMin == null || inMin == null) return null
+                  const late = inMin - expectedMin
+                  if (late <= 0) return null
+                  return (
+                    <div className="mt-1 text-xs text-yellow-700">
+                      Telat • {late} menit
+                    </div>
+                  )
+                })()}
 
                 <div className="mt-2 text-xs text-muted-foreground">Geofence / Status</div>
                 <div className="mt-1 text-sm">

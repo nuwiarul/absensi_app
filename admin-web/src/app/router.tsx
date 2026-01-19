@@ -14,6 +14,7 @@ import SettingsPage from "@/pages/SettingsPage"
 import RanksPage from "@/pages/RanksPage"
 import AttendanceRecapPage from "@/pages/AttendanceRecapPage"
 import AttendanceManagePage from "@/pages/AttendanceManagePage"
+import LeaveRequestsPage from "@/pages/LeaveRequestsPage"
 //import WorkPatternsPage from "@/pages/WorkPatternsPage"*/
 
 export const router = createBrowserRouter([
@@ -35,6 +36,7 @@ export const router = createBrowserRouter([
                     { path: "/calendar/result", element: <CalendarResultPage /> },
                     { path: "/attendance/recap", element: <AttendanceRecapPage /> },
                     { path: "/attendance/manage", element: <AttendanceManagePage /> },
+                    { path: "/leave-requests", element: <LeaveRequestsPage /> },
                     { path: "/holidays", element: <HolidaysBulkPage /> },
                     { path: "/ranks", element: <RanksPage /> },
                     { path: "/settings", element: <SettingsPage /> },

@@ -65,12 +65,11 @@ function defaultMonthRangeYmd(now: Date, tz: string) {
   }).formatToParts(now)
   const year = parts.find((p) => p.type === "year")!.value
   const month = parts.find((p) => p.type === "month")!.value
+  const day = parts.find((p) => p.type === "day")!.value
   // start = 01
   const from = `${year}-${month}-01`
-  // end = last day of month
-  const last = new Date(Date.UTC(Number(year), Number(month), 0))
-  const lastDay = String(last.getUTCDate()).padStart(2, "0")
-  const to = `${year}-${month}-${lastDay}`
+  // end = today (disable future dates in edit attendance)
+  const to = `${year}-${month}-${day}`
   return { year: Number(year), month: Number(month), from, to }
 }
 
@@ -129,6 +128,7 @@ export default function AttendanceManagePage() {
   const tz = tzQ.data?.timezone ?? "Asia/Jakarta"
 
   const init = useMemo(() => defaultMonthRangeYmd(new Date(), tz), [tz])
+  const todayYmd = init.to
   const [satkerId, setSatkerId] = useState<string>("")
   const [userId, setUserId] = useState<string>("")
   const [from, setFrom] = useState<string>(init.from)
@@ -316,11 +316,27 @@ export default function AttendanceManagePage() {
 
             <div className="space-y-1">
               <Label>Dari</Label>
-              <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+              <Input
+                type="date"
+                value={from}
+                max={todayYmd}
+                onChange={(e) => {
+                  const v = e.target.value
+                  setFrom(v > todayYmd ? todayYmd : v)
+                }}
+              />
             </div>
             <div className="space-y-1">
               <Label>Sampai</Label>
-              <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+              <Input
+                type="date"
+                value={to}
+                max={todayYmd}
+                onChange={(e) => {
+                  const v = e.target.value
+                  setTo(v > todayYmd ? todayYmd : v)
+                }}
+              />
             </div>
           </div>
 

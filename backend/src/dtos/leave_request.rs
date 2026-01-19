@@ -77,6 +77,32 @@ pub struct ListMyLeaveQuery {
     pub to: NaiveDate,
 }
 
+pub fn validate_list_leave_admin_query(req: &ListLeaveAdminQuery) -> Result<(), ValidationError> {
+    if req.to < req.from {
+        let mut error = ValidationError::new("invalid_range");
+        error.message = Some("Tanggal end tidak boleh lebih awal dari tanggal start".into());
+        return Err(error);
+    }
+
+    Ok(())
+}
+
+/// Query untuk admin web (superadmin bisa filter by satker_id).
+/// Untuk selain superadmin, satker_id akan diabaikan dan dipaksa ke satker user.
+#[derive(Debug, Deserialize, Clone, Validate)]
+#[validate(schema(function = "validate_list_leave_admin_query"))]
+pub struct ListLeaveAdminQuery {
+    pub from: NaiveDate,
+    pub to: NaiveDate,
+    pub satker_id: Option<Uuid>,
+}
+
+/// Query untuk pending list (superadmin bisa filter by satker_id).
+#[derive(Debug, Deserialize, Clone)]
+pub struct ListPendingLeaveQuery {
+    pub satker_id: Option<Uuid>,
+}
+
 #[derive(Debug, Serialize, Clone)]
 pub struct CreateLeaveDto {
     pub id: Uuid,

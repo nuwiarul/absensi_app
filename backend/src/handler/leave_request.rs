@@ -4,7 +4,7 @@ use crate::constants::{LeaveStatus, LeaveType};
 use crate::database::leave_request::LeaveRequestRepo;
 use crate::database::satker::SatkerRepo;
 use crate::database::satker_head::SatkerHeadRepo;
-use crate::dtos::leave_request::{CreateLeaveDto, CreateLeaveReq, CreateLeaveResp, DecisionLeaveReq, LeaveRequestsResp, ListMyLeaveQuery, PendingLeaveDto, PendingLeaveResp};
+use crate::dtos::leave_request::{CreateLeaveDto, CreateLeaveReq, CreateLeaveResp, DecisionLeaveReq, LeaveRequestsResp, ListLeaveAdminQuery, ListMyLeaveQuery, ListPendingLeaveQuery, PendingLeaveDto, PendingLeaveResp};
 use crate::dtos::satker::{CreateSatkerReq, SatkerDto};
 use crate::dtos::user::UserDto;
 use crate::error::HttpError;
@@ -25,6 +25,7 @@ pub fn leave_request_handler() -> Router {
         .route("/mine", get(list_my_leaves))
         .route("/", get(list_all_leaves))
         .route("/pending", get(list_pending_leaves))
+        .route("/decided", get(list_decided_leaves))
         .route("/{id}/approve", post(approve_leave))
         .route("/{id}/reject", post(reject_leave))
 }
@@ -143,7 +144,157 @@ pub async fn list_all_leaves(
     Ok(Json(response))
 }
 
+pub async fn list_decided_leaves(
+    Query(query_params): Query<ListLeaveAdminQuery>,
+    Extension(app_state): Extension<Arc<AppState>>,
+    Extension(user_claims): Extension<AuthMiddleware>,
+) -> Result<impl IntoResponse, HttpError> {
+    if !user_claims.user_claims.role.can_view_leave() {
+        return Err(HttpError::unauthorized("Anda tidak berhak akses request ini"));
+    }
+
+    query_params
+        .validate()
+        .map_err(|e| HttpError::bad_request(e.to_string()))?;
+
+    let rows = if user_claims.user_claims.role == UserRole::Superadmin {
+        if let Some(satker_id) = query_params.satker_id {
+            app_state
+                .db_client
+                .list_decided_leave_request_by_satker_from_to(satker_id, query_params.from, query_params.to)
+                .await
+                .map_err(|e| HttpError::server_error(e.to_string()))?
+        } else {
+            app_state
+                .db_client
+                .list_decided_leave_request_all_from_to(query_params.from, query_params.to)
+                .await
+                .map_err(|e| HttpError::server_error(e.to_string()))?
+        }
+    } else {
+        // Non-superadmin hanya boleh melihat satker sendiri (abaikan query satker_id dari client)
+        app_state
+            .db_client
+            .list_decided_leave_request_by_satker_from_to(
+                user_claims.user_claims.satker_id,
+                query_params.from,
+                query_params.to,
+            )
+            .await
+            .map_err(|e| HttpError::server_error(e.to_string()))?
+    };
+
+    let response = LeaveRequestsResp {
+        status: "200",
+        data: rows,
+    };
+
+    Ok(Json(response))
+}
+
 pub async fn list_pending_leaves(
+    Query(query_params): Query<ListPendingLeaveQuery>,
+    Extension(app_state): Extension<Arc<AppState>>,
+    Extension(user_claims): Extension<AuthMiddleware>,
+) -> Result<impl IntoResponse, HttpError> {
+    if !user_claims.user_claims.role.can_approve_leave() {
+        return Err(HttpError::unauthorized(
+            "Forbidden, anda tidak berhak akses request ini",
+        ));
+    }
+
+    // ✅ SATKER_ADMIN boleh approve/reject tanpa harus menjadi kepala satker.
+    // ✅ SATKER_HEAD hanya boleh jika memang kepala satker yang aktif.
+    if matches!(user_claims.user_claims.role, UserRole::SatkerHead) {
+        let ok = app_state
+            .db_client
+            .is_current_head_satker(
+                user_claims.user_claims.satker_id,
+                user_claims.user_claims.user_id,
+            )
+            .await
+            .map_err(|e| HttpError::server_error(e.to_string()))?;
+        if !ok {
+            return Err(HttpError::unauthorized(
+                "Forbidden, anda tidak berhak akses request ini",
+            ));
+        }
+    }
+
+    let rows = if user_claims.user_claims.role == UserRole::Superadmin {
+        if let Some(satker_id) = query_params.satker_id {
+            app_state
+                .db_client
+                .list_pending_leave_by_satker(satker_id)
+                .await
+                .map_err(|e| HttpError::server_error(e.to_string()))?
+        } else {
+            app_state
+                .db_client
+                .list_pending_leave_all()
+                .await
+                .map_err(|e| HttpError::server_error(e.to_string()))?
+        }
+    } else {
+        // Non-superadmin hanya boleh melihat satker sendiri (abaikan query satker_id dari client)
+        app_state
+            .db_client
+            .list_pending_leave_by_satker(user_claims.user_claims.satker_id)
+            .await
+            .map_err(|e| HttpError::server_error(e.to_string()))?
+    };
+
+    let response = PendingLeaveResp {
+        status: "200",
+        data: rows,
+    };
+
+    Ok(Json(response))
+}
+
+
+/*pub async fn list_decided_leaves(
+    Query(query_params): Query<ListLeaveAdminQuery>,
+    Extension(app_state): Extension<Arc<AppState>>,
+    Extension(user_claims): Extension<AuthMiddleware>,
+) -> Result<impl IntoResponse, HttpError> {
+    if !user_claims.user_claims.role.can_view_leave() {
+        return Err(HttpError::unauthorized("Anda tidak berhak akses request ini"));
+    }
+
+    query_params
+        .validate()
+        .map_err(|e| HttpError::bad_request(e.to_string()))?;
+
+    let rows = if user_claims.user_claims.role == UserRole::Superadmin {
+        app_state
+            .db_client
+            .list_decided_leave_request_all_from_to(query_params.from, query_params.to)
+            .await
+            .map_err(|e| HttpError::server_error(e.to_string()))?
+    } else {
+        app_state
+            .db_client
+            .list_decided_leave_request_by_satker_from_to(
+                user_claims.user_claims.satker_id,
+                query_params.from,
+                query_params.to,
+            )
+            .await
+            .map_err(|e| HttpError::server_error(e.to_string()))?
+    };
+
+    let response = LeaveRequestsResp {
+        status: "200",
+        data: rows,
+    };
+
+    Ok(Json(response))
+}
+
+
+pub async fn list_pending_leaves(
+    Query(query_params): Query<ListPendingLeaveQuery>,
     Extension(app_state): Extension<Arc<AppState>>,
     Extension(user_claims): Extension<AuthMiddleware>,
 ) -> Result<impl IntoResponse, HttpError> {
@@ -190,7 +341,7 @@ pub async fn list_pending_leaves(
 
     Ok(Json(response))
 }
-
+*/
 pub async fn approve_leave(
     Extension(app_state): Extension<Arc<AppState>>,
     Extension(user_claims): Extension<AuthMiddleware>,

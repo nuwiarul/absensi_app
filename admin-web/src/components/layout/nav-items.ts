@@ -16,6 +16,7 @@ const ALL: (NavItem & { roles: Role[] })[] = [
     { label: "Calendar Result", to: "/calendar/result", roles: ["SUPERADMIN", "SATKER_ADMIN"] },
     { label: "Edit Absensi", to: "/attendance/manage", roles: ["SUPERADMIN"] },
     { label: "Rekap Absensi", to: "/attendance/recap", roles: ["SUPERADMIN", "SATKER_ADMIN", "SATKER_HEAD"] },
+    { label: "Leave Requests", to: "/leave-requests", roles: ["SUPERADMIN", "SATKER_ADMIN", "SATKER_HEAD"] },
     { label: "Settings", to: "/settings", roles: ["SUPERADMIN"] },
 ]
 

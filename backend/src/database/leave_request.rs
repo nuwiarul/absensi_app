@@ -56,6 +56,21 @@ pub trait LeaveRequestRepo {
         from: NaiveDate,
         to: NaiveDate,
     ) -> Result<Vec<LeaveRequestDto>, Error>;
+
+    /// List leave requests that have been decided (APPROVED / REJECTED)
+    async fn list_decided_leave_request_all_from_to(
+        &self,
+        from: NaiveDate,
+        to: NaiveDate,
+    ) -> Result<Vec<LeaveRequestDto>, Error>;
+
+    /// List leave requests for a satker that have been decided (APPROVED / REJECTED)
+    async fn list_decided_leave_request_by_satker_from_to(
+        &self,
+        satker_id: Uuid,
+        from: NaiveDate,
+        to: NaiveDate,
+    ) -> Result<Vec<LeaveRequestDto>, Error>;
 }
 
 #[async_trait]
@@ -353,5 +368,112 @@ impl LeaveRequestRepo for DBClient {
         .execute(&self.pool)
         .await?;
         Ok(())
+    }
+
+    async fn list_decided_leave_request_all_from_to(
+        &self,
+        from: NaiveDate,
+        to: NaiveDate,
+    ) -> Result<Vec<LeaveRequestDto>, Error> {
+        let rows = sqlx::query_as!(
+            LeaveRequestDto,
+            r#"
+            SELECT
+                lr.id,
+                s.name AS satker_name,
+                s.id AS satker_id,
+                s.code AS satker_code,
+                u.full_name AS user_full_name,
+                u.id AS user_id,
+                u.nrp AS user_nrp,
+                u.role AS "role: UserRole",
+                u.phone AS user_phone,
+                lr.tipe AS "tipe: LeaveType",
+                lr.start_date,
+                lr.end_date,
+                lr.reason,
+                lr.status AS "status: LeaveStatus",
+                lr.submitted_at,
+                lr.decided_at,
+                a.full_name AS "approver_full_name?",
+                a.id AS "approver_id?",
+                a.nrp AS "approver_nrp?",
+                a.role AS "approver_role?: UserRole",
+                a.phone AS "approver_phone?",
+                lr.decision_note,
+                lr.created_at,
+                lr.updated_at
+            FROM leave_requests lr
+            JOIN users u ON lr.user_id=u.id
+            JOIN satkers s ON lr.satker_id=s.id
+            LEFT JOIN users a ON lr.approver_id=a.id
+            WHERE
+                lr.status IN ('APPROVED','REJECTED') AND
+                lr.start_date >= $1 AND
+                lr.end_date <= $2
+            ORDER BY lr.decided_at DESC NULLS LAST, lr.created_at DESC
+            "#,
+            from,
+            to
+        )
+            .fetch_all(&self.pool)
+            .await?;
+
+        Ok(rows)
+    }
+
+    async fn list_decided_leave_request_by_satker_from_to(
+        &self,
+        satker_id: Uuid,
+        from: NaiveDate,
+        to: NaiveDate,
+    ) -> Result<Vec<LeaveRequestDto>, Error> {
+        let rows = sqlx::query_as!(
+            LeaveRequestDto,
+            r#"
+            SELECT
+                lr.id,
+                s.name AS satker_name,
+                s.id AS satker_id,
+                s.code AS satker_code,
+                u.full_name AS user_full_name,
+                u.id AS user_id,
+                u.nrp AS user_nrp,
+                u.role AS "role: UserRole",
+                u.phone AS user_phone,
+                lr.tipe AS "tipe: LeaveType",
+                lr.start_date,
+                lr.end_date,
+                lr.reason,
+                lr.status AS "status: LeaveStatus",
+                lr.submitted_at,
+                lr.decided_at,
+                a.full_name AS "approver_full_name?",
+                a.id AS "approver_id?",
+                a.nrp AS "approver_nrp?",
+                a.role AS "approver_role?: UserRole",
+                a.phone AS "approver_phone?",
+                lr.decision_note,
+                lr.created_at,
+                lr.updated_at
+            FROM leave_requests lr
+            JOIN users u ON lr.user_id=u.id
+            JOIN satkers s ON lr.satker_id=s.id
+            LEFT JOIN users a ON lr.approver_id=a.id
+            WHERE
+                lr.status IN ('APPROVED','REJECTED') AND
+                lr.satker_id = $1 AND
+                lr.start_date >= $2 AND
+                lr.end_date <= $3
+            ORDER BY lr.decided_at DESC NULLS LAST, lr.created_at DESC
+            "#,
+            satker_id,
+            from,
+            to
+        )
+            .fetch_all(&self.pool)
+            .await?;
+
+        Ok(rows)
     }
 }

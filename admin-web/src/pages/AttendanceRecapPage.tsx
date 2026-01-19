@@ -351,7 +351,10 @@ function recapKindFromRow(r: any, tz: string): { kind: RecapKind; label: string;
   const inMin = isoUtcToMinutesInTz(r?.check_in_at, tz)
   const geo = (r?.check_in_geofence_name ?? r?.check_out_geofence_name) as string | undefined
   if (expectedMin != null && inMin != null && inMin > expectedMin) {
-    return { kind: "TELAT", label: "Telat", detail: geo }
+    const late = inMin - expectedMin
+    const lateStr = late > 0 ? `${late} menit` : undefined
+    const detail = lateStr ? (geo ? `${lateStr} • ${geo}` : lateStr) : geo
+    return { kind: "TELAT", label: "Telat", detail }
   }
   return { kind: "NORMAL", label: "Normal", detail: geo }
 }
