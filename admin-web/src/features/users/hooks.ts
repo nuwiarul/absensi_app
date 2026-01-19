@@ -8,10 +8,11 @@ export const usersKeys = {
   all: ["users"] as const,
 }
 
-export function useUsers(satkerId?: string) {
+export function useUsers(satkerId?: string, enabled: boolean = true) {
   return useQuery({
     queryKey: ["users", satkerId ?? "ALL"],
     queryFn: () => (satkerId ? getUsersBySatker(satkerId) : getUsers()),
+    enabled,
   })
 }
 

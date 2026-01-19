@@ -2,23 +2,25 @@ use crate::AppState;
 use crate::handler::attendance::attendance_handler;
 use crate::handler::attendance_challenge::attendance_challenge_handler;
 use crate::handler::auth::auth_handler;
+use crate::handler::duty_schedule::duty_schedule_handler;
+use crate::handler::files::files_handler;
 use crate::handler::geofence::geofence_handler;
+use crate::handler::holiday::holiday_handler;
 use crate::handler::leave_request::leave_request_handler;
+use crate::handler::rank::rank_handler;
 use crate::handler::satker::satker_handler;
 use crate::handler::satker_head::satker_head_handler;
+use crate::handler::schedule::schedule_handler;
+use crate::handler::settings::settings_handler;
+use crate::handler::upload::uploads_handler;
 use crate::handler::user::user_handler;
+use crate::handler::working_days::working_days_handler;
 use crate::middleware::auth_middleware::auth_middleware;
 use axum::routing::get;
 use axum::{Extension, Router, middleware};
 use std::sync::Arc;
 use tower_http::trace::TraceLayer;
-use crate::handler::files::files_handler;
-use crate::handler::holiday::holiday_handler;
-use crate::handler::rank::rank_handler;
-use crate::handler::schedule::schedule_handler;
-use crate::handler::settings::settings_handler;
-use crate::handler::upload::uploads_handler;
-use crate::handler::working_days::working_days_handler;
+use crate::handler::tukin::tukin_handler;
 
 async fn health() -> &'static str {
     "ok"
@@ -58,6 +60,14 @@ pub fn create_router(app_state: Arc<AppState>) -> Router {
         .nest(
             "/schedules",
             schedule_handler().layer(middleware::from_fn(auth_middleware)),
+        )
+        .nest(
+            "/duty-schedules",
+            duty_schedule_handler().layer(middleware::from_fn(auth_middleware)),
+        )
+        .nest(
+            "/tukin",
+            tukin_handler().layer(middleware::from_fn(auth_middleware)),
         )
         .nest(
             "/uploads",

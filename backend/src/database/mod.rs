@@ -12,3 +12,5 @@ pub mod holiday;
 pub mod work_pattern;
 pub mod settings;
 pub mod rank;
+pub mod duty_schedule;
+pub mod tukin;

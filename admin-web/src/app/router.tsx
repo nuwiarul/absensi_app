@@ -15,6 +15,9 @@ import RanksPage from "@/pages/RanksPage"
 import AttendanceRecapPage from "@/pages/AttendanceRecapPage"
 import AttendanceManagePage from "@/pages/AttendanceManagePage"
 import LeaveRequestsPage from "@/pages/LeaveRequestsPage"
+import DutySchedulesPage from "@/pages/DutySchedulesPage"
+import TukinCalculationsPage from "@/pages/TukinCalculationsPage"
+import TukinPolicyPage from "@/pages/TukinPolicyPage"
 //import WorkPatternsPage from "@/pages/WorkPatternsPage"*/
 
 export const router = createBrowserRouter([
@@ -38,6 +41,9 @@ export const router = createBrowserRouter([
                     { path: "/attendance/manage", element: <AttendanceManagePage /> },
                     { path: "/leave-requests", element: <LeaveRequestsPage /> },
                     { path: "/holidays", element: <HolidaysBulkPage /> },
+                    { path: "/duty-schedules", element: <DutySchedulesPage /> },
+                    { path: "/tukin/calculations", element: <TukinCalculationsPage /> },
+                    { path: "/tukin/policies", element: <TukinPolicyPage /> },
                     { path: "/ranks", element: <RanksPage /> },
                     { path: "/settings", element: <SettingsPage /> },
                     /*{ path: "/working-days", element: <WorkPatternsPage /> },*/

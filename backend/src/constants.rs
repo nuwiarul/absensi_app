@@ -17,7 +17,7 @@ pub const SUPERUSER_USER_ID: Uuid = Uuid::from_bytes([
     0x11, 0x11, 0x11, 0x11, 0x11, 0x11
 ]);
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, sqlx::Type)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, sqlx::Type, Hash)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 #[sqlx(type_name = "leave_type", rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum LeaveType {

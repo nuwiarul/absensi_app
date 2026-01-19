@@ -14,3 +14,5 @@ pub mod working_days;
 pub mod settings;
 pub mod rank;
 pub mod attendance_admin;
+pub mod duty_schedule;
+pub mod tukin;
