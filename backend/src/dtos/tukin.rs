@@ -168,10 +168,36 @@ pub struct TukinCalculationDto {
     pub updated_at: DateTime<Utc>,
 }
 
+/// ✅ Row untuk list/generate (JOIN users/satkers/ranks) — ini yang dipakai frontend
+#[derive(Debug, Serialize, sqlx::FromRow, Clone)]
+pub struct TukinCalculationRowDto {
+    pub month: String, // YYYY-MM (to_char)
+
+    pub satker_id: Uuid,
+    pub satker_code: Option<String>,
+    pub satker_name: Option<String>,
+
+    pub user_id: Uuid,
+    pub user_full_name: String,
+    pub user_nrp: String,
+
+    pub rank_code: Option<String>,
+    pub rank_name: Option<String>,
+
+    pub base_tukin: i64,
+    pub expected_units: f64,
+    pub earned_credit: f64,
+    pub attendance_ratio: f64,
+    pub final_tukin: i64,
+
+    pub breakdown: JsonValue,
+    pub updated_at: DateTime<Utc>,
+}
+
 #[derive(Debug, Serialize)]
 pub struct TukinCalculationsResp {
     pub status: &'static str,
-    pub data: Vec<TukinCalculationDto>,
+    pub data: Vec<TukinCalculationRowDto>,
 }
 
 #[derive(Debug, Serialize)]

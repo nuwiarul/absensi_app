@@ -133,6 +133,7 @@ impl FromStr for ScheduleType {
 #[sqlx(type_name = "attendance_leave_type", rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum AttendanceLeaveType {
     Normal,
+    JadwalDinas,
     DinasLuar,
     Wfa,
     Wfh,

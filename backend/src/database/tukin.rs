@@ -9,6 +9,7 @@ use crate::db::DBClient;
 use crate::dtos::tukin::{
     CreateTukinPolicyReq, LeaveRuleInput, TukinCalculationDto, TukinLeaveRuleDto, TukinPolicyDto,
     UpdateTukinPolicyReq,
+    TukinCalculationRowDto,
 };
 
 #[derive(Debug, Clone, sqlx::FromRow)]
@@ -74,7 +75,7 @@ pub trait TukinRepo {
 
     // cache
     async fn upsert_tukin_calculation(&self, row: TukinCalculationUpsert) -> Result<TukinCalculationDto, Error>;
-    async fn list_tukin_calculations(&self, month: NaiveDate, satker_id: Option<Uuid>, user_id: Option<Uuid>) -> Result<Vec<TukinCalculationDto>, Error>;
+    async fn list_tukin_calculations(&self, month: NaiveDate, satker_id: Option<Uuid>, user_id: Option<Uuid>) -> Result<Vec<TukinCalculationRowDto>, Error>;
 }
 
 #[async_trait]
@@ -482,36 +483,51 @@ impl TukinRepo for DBClient {
         Ok(rec)
     }
 
-    async fn list_tukin_calculations(&self, month: NaiveDate, satker_id: Option<Uuid>, user_id: Option<Uuid>) -> Result<Vec<TukinCalculationDto>, Error> {
+    async fn list_tukin_calculations(
+        &self,
+        month: NaiveDate,
+        satker_id: Option<Uuid>,
+        user_id: Option<Uuid>,
+    ) -> Result<Vec<TukinCalculationRowDto>, Error> {
         let rows = sqlx::query_as!(
-            TukinCalculationDto,
+            TukinCalculationRowDto,
             r#"
             SELECT
-              id,
-              month,
-              satker_id,
-              user_id,
-              policy_id,
-              base_tukin,
-              expected_units,
-              earned_credit,
-              attendance_ratio,
-              final_tukin,
-              breakdown as "breakdown: JsonValue",
-              created_at,
-              updated_at
-            FROM tukin_calculations
-            WHERE month = $1
-              AND ($2::uuid IS NULL OR satker_id = $2)
-              AND ($3::uuid IS NULL OR user_id = $3)
-            ORDER BY final_tukin DESC, user_id ASC
+              to_char(tc.month, 'YYYY-MM') as "month!",
+              tc.satker_id,
+              st.code as "satker_code?",
+              st.name as "satker_name?",
+
+              tc.user_id,
+              u.full_name as "user_full_name!",
+              u.nrp as "user_nrp!",
+
+              r.code as "rank_code?",
+              r.name as "rank_name?",
+
+              tc.base_tukin,
+              tc.expected_units,
+              tc.earned_credit,
+              tc.attendance_ratio,
+              tc.final_tukin,
+
+              tc.breakdown as "breakdown: JsonValue",
+              tc.updated_at
+            FROM tukin_calculations tc
+            JOIN users u ON u.id = tc.user_id
+            JOIN satkers st ON st.id = tc.satker_id
+            LEFT JOIN ranks r ON r.id = u.rank_id
+            WHERE tc.month = $1
+              AND ($2::uuid IS NULL OR tc.satker_id = $2)
+              AND ($3::uuid IS NULL OR tc.user_id = $3)
+            ORDER BY tc.final_tukin DESC, tc.user_id ASC
             "#,
             month,
             satker_id,
             user_id
         )
-            .fetch_all(&self.pool)
-            .await?;
+        .fetch_all(&self.pool)
+        .await?;
 
         Ok(rows)
     }

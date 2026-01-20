@@ -1,6 +1,7 @@
 DO $$ BEGIN
     CREATE TYPE attendance_leave_type AS ENUM (
         'NORMAL',
+        'JADWAL_DINAS',
         'DINAS_LUAR',
         'WFA',
         'WFH',
