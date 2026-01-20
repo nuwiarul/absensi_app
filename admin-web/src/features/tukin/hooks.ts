@@ -8,8 +8,11 @@ import {
   generateTukinCalculations,
   saveLeaveRules,
   updateTukinPolicy,
+    deleteTukinPolicy
 } from "./api"
 import type { CreateTukinPolicyReq, SaveLeaveRulesReq, UpdateTukinPolicyReq } from "./types"
+
+
 
 export const tukinKeys = {
   policies: (satkerId?: string) => ["tukin", "policies", satkerId ?? "ALL"] as const,
@@ -98,3 +101,74 @@ export function useGenerateTukin() {
     },
   })
 }
+
+export function useDeleteTukinPolicy() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => deleteTukinPolicy(id),
+
+    // ✅ optimistic remove: semua cache tukin policies langsung diupdate
+    onMutate: async (id: string) => {
+      await qc.cancelQueries({
+        predicate: (q) =>
+            Array.isArray(q.queryKey) &&
+            q.queryKey[0] === "tukin" &&
+            q.queryKey[1] === "policies",
+      })
+
+      const prev = qc.getQueriesData({
+        predicate: (q) =>
+            Array.isArray(q.queryKey) &&
+            q.queryKey[0] === "tukin" &&
+            q.queryKey[1] === "policies",
+      })
+
+      qc.setQueriesData(
+          {
+            predicate: (q) =>
+                Array.isArray(q.queryKey) &&
+                q.queryKey[0] === "tukin" &&
+                q.queryKey[1] === "policies",
+          },
+          (old: any) => {
+            if (!Array.isArray(old)) return old
+            return old.filter((p: any) => p?.id !== id)
+          }
+      )
+
+      return { prev }
+    },
+
+    onError: (_err, _id, ctx) => {
+      // rollback kalau gagal
+      if (ctx?.prev) {
+        for (const [key, data] of ctx.prev) qc.setQueryData(key, data)
+      }
+    },
+
+    onSuccess: async () => {
+      toast.success("Policy berhasil dihapus")
+
+      // ✅ paksa refresh dari server (bukan cuma invalidate)
+      await qc.refetchQueries({
+        predicate: (q) =>
+            Array.isArray(q.queryKey) &&
+            q.queryKey[0] === "tukin" &&
+            q.queryKey[1] === "policies",
+      })
+    },
+  })
+}
+
+
+/*export function useDeleteTukinPolicy() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => deleteTukinPolicy(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tukinPolicies"] })
+    },
+  })
+}*/
+

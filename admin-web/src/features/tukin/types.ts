@@ -53,7 +53,8 @@ export type UpdateTukinPolicyReq = {
 
 export type LeaveRule = {
   leave_type: LeaveType
-  credit: number
+  credit: number,
+  counts_as_present: boolean
 }
 
 export type LeaveRulesResp = {

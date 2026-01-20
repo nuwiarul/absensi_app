@@ -34,7 +34,7 @@ pub fn tukin_handler() -> Router {
         .route("/calculations", get(list_calculations))
         .route("/generate", post(generate_calculations))
         .route("/policies", get(list_policies).post(create_policy))
-        .route("/policies/{id}", put(update_policy))
+        .route("/policies/{id}", put(update_policy).delete(delete_policy))
         .route("/policies/{id}/leave-rules", get(get_leave_rules).put(put_leave_rules))
 }
 
@@ -273,7 +273,331 @@ async fn compute_tukin_summaries(
         let mut total_late_minutes: i64 = 0;
 
         let mut days: Vec<crate::dtos::tukin::TukinDayBreakdownDto> = Vec::new();
-        
+
+        /*for d in &dates {
+            let (day_type, expected_start, _expected_end) = cal_map
+                .get(d)
+                .copied()
+                .unwrap_or((CalendarDayType::Workday, None, None));
+
+            // sessions rekap (work_date)
+            let sess = sess_map.get(d);
+
+            // event leave type (fallback), dari rekap attendance
+            let event_leave_raw = sess
+                .and_then(|s| s.check_in_attendance_leave_type)
+                .or_else(|| sess.and_then(|s| s.check_out_attendance_leave_type));
+
+            // =========================================================
+            // 1) APPROVED LEAVE REQUEST (MENANG MUTLAK)
+            // =========================================================
+            let leave_from_requests = leave_credit_for_date(&leaves, &leave_rules, *d);
+            if let Some((lr_type, lr_credit)) = leave_from_requests {
+                expected_units += 1.0;
+
+                // optional: kalau user tetap absen, boleh "max" dengan credit hadir
+                let mut credit_present = 0.0;
+                let mut check_in_at = None;
+                let mut check_out_at = None;
+
+                if let Some(sess) = sess {
+                    check_in_at = sess.check_in_at;
+                    check_out_at = sess.check_out_at;
+
+                    if sess.check_in_at.is_some() {
+                        if sess.check_out_at.is_some() {
+                            credit_present = 1.0;
+                        } else {
+                            credit_present =
+                                (1.0 - (policy.missing_checkout_penalty_pct / 100.0)).max(0.0);
+                            missing_checkout_days += 1;
+                        }
+                    }
+                }
+
+                let credit = credit_present.max(lr_credit);
+                earned_credit += credit;
+
+                if credit > 0.0 {
+                    present_days += 1;
+                } else {
+                    absent_days += 1;
+                }
+
+                days.push(crate::dtos::tukin::TukinDayBreakdownDto {
+                    work_date: *d,
+                    expected_unit: 1.0,
+                    earned_credit: credit,
+                    is_duty_schedule: false,
+                    duty_schedule_id: None,
+                    check_in_at,
+                    check_out_at,
+                    late_minutes: None, // ✅ no late untuk approved leave
+                    leave_type: Some(lr_type),
+                    leave_credit: Some(lr_credit),
+                    note: Some(format!("{:?}", lr_type).to_uppercase()),
+                });
+
+                continue;
+            }
+
+            // =========================================================
+            // 2) DUTY SCHEDULE (WAJIB CHECK-IN, HOLIDAY TETAP WAJIB)
+            // =========================================================
+            if let Some(ds) = duty_by_date.get(d) {
+                expected_units += 1.0;
+
+                let window_start = ds.start_at - Duration::minutes(30);
+                let window_end = ds.end_at + Duration::minutes(180);
+
+                // ✅ Untuk duty schedule: check-out tidak wajib.
+                // Tapi kalau user memang check-out, tetap tampilkan.
+                // Dan untuk present/earned, kita utamakan data session (work_date) agar tidak miss karena window/shift.
+                let mut check_in_at = sess.and_then(|s| s.check_in_at);
+                let mut check_out_at = sess.and_then(|s| s.check_out_at);
+
+                // Fallback: kalau session belum ada / tidak ketemu, cari event check-in dalam window duty.
+                if check_in_at.is_none() {
+                    let ci = app_state
+                        .db_client
+                        .find_first_event_in_range(
+                            u.id,
+                            AttendanceEventType::CheckIn,
+                            window_start,
+                            window_end,
+                        )
+                        .await
+                        .map_err(|e| HttpError::server_error(e.to_string()))?;
+
+                    if let Some(ci) = ci {
+                        check_in_at = Some(ci.occurred_at);
+                    }
+                }
+
+                // Optional display: kalau checkout belum ada di session, coba cari event checkout dalam window.
+                if check_out_at.is_none() {
+                    let co = app_state
+                        .db_client
+                        .find_first_event_in_range(
+                            u.id,
+                            AttendanceEventType::CheckOut,
+                            window_start,
+                            window_end,
+                        )
+                        .await
+                        .map_err(|e| HttpError::server_error(e.to_string()))?;
+
+                    if let Some(co) = co {
+                        check_out_at = Some(co.occurred_at);
+                    }
+                }
+
+                let credit = if check_in_at.is_some() { 1.0 } else { 0.0 };
+
+                if credit > 0.0 {
+                    duty_present += 1;
+                    present_days += 1;
+                } else {
+                    duty_absent += 1;
+                    absent_days += 1;
+                }
+
+                earned_credit += credit;
+
+                days.push(crate::dtos::tukin::TukinDayBreakdownDto {
+                    work_date: *d,
+                    expected_unit: 1.0,
+                    earned_credit: credit,
+                    is_duty_schedule: true,
+                    duty_schedule_id: Some(ds.id),
+                    check_in_at,
+                    check_out_at,
+                    late_minutes: None, // ✅ no late
+                    leave_type: None,
+                    leave_credit: None,
+                    note: Some("DUTY_SCHEDULE".to_string()),
+                });
+
+                continue;
+            }
+
+            // =========================================================
+            // Kalau bukan leave_request & bukan duty_schedule:
+            // Kalau HOLIDAY -> ignore (expected_unit 0)
+            // =========================================================
+            if day_type == CalendarDayType::Holiday {
+                days.push(crate::dtos::tukin::TukinDayBreakdownDto {
+                    work_date: *d,
+                    expected_unit: 0.0,
+                    earned_credit: 0.0,
+                    is_duty_schedule: false,
+                    duty_schedule_id: None,
+                    check_in_at: None,
+                    check_out_at: None,
+                    late_minutes: None,
+                    leave_type: None,
+                    leave_credit: None,
+                    note: Some("HOLIDAY_IGNORED".to_string()),
+                });
+                continue;
+            }
+
+            // =========================================================
+            // 3) EVENT attendance_leave_type (fallback)
+            // =========================================================
+            if let Some(ev) = event_leave_raw {
+                match ev {
+                    // 3a) JADWAL_DINAS -> treated like duty schedule
+                    crate::constants::AttendanceLeaveType::JadwalDinas => {
+                        expected_units += 1.0;
+
+                        let check_in_at = sess.and_then(|s| s.check_in_at);
+
+                        let credit = if check_in_at.is_some() { 1.0 } else { 0.0 };
+
+                        earned_credit += credit;
+
+                        if credit > 0.0 {
+                            present_days += 1;
+                        } else {
+                            absent_days += 1;
+                        }
+
+                        days.push(crate::dtos::tukin::TukinDayBreakdownDto {
+                            work_date: *d,
+                            expected_unit: 1.0,
+                            earned_credit: credit,
+                            is_duty_schedule: false,
+                            duty_schedule_id: None,
+                            check_in_at,
+                            check_out_at: None,
+                            late_minutes: None, // ✅ no late untuk jadwal_dinas
+                            leave_type: None,
+                            leave_credit: None,
+                            note: Some("JADWAL_DINAS".to_string()),
+                        });
+
+                        continue;
+                    }
+
+                    // 3b) WFH/WFA -> treated as normal hadir (late + missing checkout berlaku)
+                    crate::constants::AttendanceLeaveType::Wfh
+                    | crate::constants::AttendanceLeaveType::Wfa => {
+                        // lanjut ke NORMAL logic di bawah,
+                        // tapi note akan jadi WFH/WFA.
+                    }
+
+                    // 3c) DINAS_LUAR / IJIN / SAKIT -> tanpa leave_request approved -> earn 0, no late
+                    crate::constants::AttendanceLeaveType::DinasLuar
+                    | crate::constants::AttendanceLeaveType::Ijin
+                    | crate::constants::AttendanceLeaveType::Sakit => {
+                        expected_units += 1.0;
+
+                        earned_credit += 0.0;
+                        absent_days += 1;
+
+                        let note = match ev {
+                            crate::constants::AttendanceLeaveType::DinasLuar => "DINAS_LUAR",
+                            crate::constants::AttendanceLeaveType::Ijin => "IJIN",
+                            crate::constants::AttendanceLeaveType::Sakit => "SAKIT",
+                            _ => "EVENT",
+                        };
+
+                        days.push(crate::dtos::tukin::TukinDayBreakdownDto {
+                            work_date: *d,
+                            expected_unit: 1.0,
+                            earned_credit: 0.0,
+                            is_duty_schedule: false,
+                            duty_schedule_id: None,
+                            check_in_at: sess.and_then(|s| s.check_in_at),
+                            check_out_at: sess.and_then(|s| s.check_out_at),
+                            late_minutes: None, // ✅ no late
+                            leave_type: None,
+                            leave_credit: None,
+                            note: Some(note.to_string()),
+                        });
+
+                        continue;
+                    }
+
+                    crate::constants::AttendanceLeaveType::Normal => {
+                        // jatuh ke NORMAL
+                    }
+                }
+            }
+
+            // =========================================================
+            // 4) NORMAL (termasuk WFH/WFA, karena lanjut ke sini)
+            // =========================================================
+            expected_units += 1.0;
+
+            let mut credit_present = 0.0;
+            let mut check_in_at = None;
+            let mut check_out_at = None;
+            let mut late_minutes = None;
+
+            if let Some(sess) = sess {
+                check_in_at = sess.check_in_at;
+                check_out_at = sess.check_out_at;
+
+                if let Some(ci) = sess.check_in_at {
+                    // hitung late berdasarkan calendar expected_start (timezone app_settings)
+                    if let Some(es) = expected_start {
+                        let naive = d.and_time(es);
+                        let expected_local = tz
+                            .from_local_datetime(&naive)
+                            .single()
+                            .unwrap_or_else(|| tz.from_utc_datetime(&naive));
+                        let expected_dt = expected_local.with_timezone(&Utc);
+
+                        let lm = (ci - expected_dt).num_minutes();
+                        let lm = if lm > 0 { lm } else { 0 };
+                        late_minutes = Some(lm);
+                        total_late_minutes += lm;
+                    }
+
+                    // hadir butuh check-in; checkout optional (missing checkout kena penalty)
+                    if sess.check_out_at.is_some() {
+                        credit_present = 1.0;
+                    } else {
+                        credit_present =
+                            (1.0 - (policy.missing_checkout_penalty_pct / 100.0)).max(0.0);
+                        missing_checkout_days += 1;
+                    }
+                }
+            }
+
+            let credit = credit_present;
+            earned_credit += credit;
+
+            if credit > 0.0 {
+                present_days += 1;
+            } else {
+                absent_days += 1;
+            }
+
+            // note: kalau WFH/WFA, tampilkan itu, selain itu pakai day_type
+            let note = match event_leave_raw {
+                Some(crate::constants::AttendanceLeaveType::Wfh) => "WFH".to_string(),
+                Some(crate::constants::AttendanceLeaveType::Wfa) => "WFA".to_string(),
+                _ => format!("{:?}", day_type).to_uppercase(),
+            };
+
+            days.push(crate::dtos::tukin::TukinDayBreakdownDto {
+                work_date: *d,
+                expected_unit: 1.0,
+                earned_credit: credit,
+                is_duty_schedule: false,
+                duty_schedule_id: None,
+                check_in_at,
+                check_out_at,
+                late_minutes,
+                leave_type: None,
+                leave_credit: None,
+                note: Some(note),
+            });
+        }*/
+
         for d in &dates {
             let (day_type, expected_start, _expected_end) = cal_map
                 .get(d)
@@ -350,27 +674,54 @@ async fn compute_tukin_summaries(
                 let window_start = ds.start_at - Duration::minutes(30);
                 let window_end = ds.end_at + Duration::minutes(180);
 
-                let ci = app_state
-                    .db_client
-                    .find_first_event_in_range(
-                        u.id,
-                        AttendanceEventType::CheckIn,
-                        window_start,
-                        window_end,
-                    )
-                    .await
-                    .map_err(|e| HttpError::server_error(e.to_string()))?;
+                // ✅ Untuk duty schedule: check-out tidak wajib.
+                // Tapi kalau user memang check-out, tetap tampilkan.
+                // Dan untuk present/earned, kita utamakan data session (work_date) agar tidak miss karena window/shift.
+                let mut check_in_at = sess.and_then(|s| s.check_in_at);
+                let mut check_out_at = sess.and_then(|s| s.check_out_at);
 
-                let mut credit = 0.0;
-                let mut check_in_at = None;
+                // Fallback: kalau session belum ada / tidak ketemu, cari event check-in dalam window duty.
+                if check_in_at.is_none() {
+                    let ci = app_state
+                        .db_client
+                        .find_first_event_in_range(
+                            u.id,
+                            AttendanceEventType::CheckIn,
+                            window_start,
+                            window_end,
+                        )
+                        .await
+                        .map_err(|e| HttpError::server_error(e.to_string()))?;
 
-                if let Some(ci) = ci {
-                    credit = 1.0;
-                    check_in_at = Some(ci.occurred_at);
+                    if let Some(ci) = ci {
+                        check_in_at = Some(ci.occurred_at);
+                    }
+                }
+
+                // Optional display: kalau checkout belum ada di session, coba cari event checkout dalam window.
+                if check_out_at.is_none() {
+                    let co = app_state
+                        .db_client
+                        .find_first_event_in_range(
+                            u.id,
+                            AttendanceEventType::CheckOut,
+                            window_start,
+                            window_end,
+                        )
+                        .await
+                        .map_err(|e| HttpError::server_error(e.to_string()))?;
+
+                    if let Some(co) = co {
+                        check_out_at = Some(co.occurred_at);
+                    }
+                }
+
+                let credit = if check_in_at.is_some() { 1.0 } else { 0.0 };
+
+                if credit > 0.0 {
                     duty_present += 1;
                     present_days += 1;
                 } else {
-                    credit = 0.0;
                     duty_absent += 1;
                     absent_days += 1;
                 }
@@ -384,7 +735,7 @@ async fn compute_tukin_summaries(
                     is_duty_schedule: true,
                     duty_schedule_id: Some(ds.id),
                     check_in_at,
-                    check_out_at: None,
+                    check_out_at,
                     late_minutes: None, // ✅ no late
                     leave_type: None,
                     leave_credit: None,
@@ -570,6 +921,7 @@ async fn compute_tukin_summaries(
                 note: Some(note),
             });
         }
+
 
         let ratio = if expected_units > 0.0 {
             earned_credit / expected_units
@@ -909,3 +1261,74 @@ pub async fn put_leave_rules(
 
     Ok(Json(TukinLeaveRulesResp { status: "200", data: rows }))
 }
+
+pub async fn delete_policy(
+    Path(id): Path<Uuid>,
+    Extension(app_state): Extension<Arc<AppState>>,
+    Extension(user_claims): Extension<AuthMiddleware>,
+) -> Result<impl IntoResponse, HttpError> {
+    // scope visibility
+    let sid = match user_claims.user_claims.role {
+        UserRole::Superadmin => None,
+        UserRole::SatkerAdmin | UserRole::SatkerHead => Some(user_claims.user_claims.satker_id),
+        UserRole::Member => return Err(HttpError::unauthorized("Tidak boleh".to_string())),
+    };
+
+    let policies = app_state
+        .db_client
+        .list_tukin_policies(sid)
+        .await
+        .map_err(|e| HttpError::server_error(e.to_string()))?;
+
+    let p = policies
+        .iter()
+        .find(|p| p.id == id)
+        .cloned()
+        .ok_or(HttpError::bad_request("Policy tidak ditemukan".to_string()))?;
+
+    // permission: satker roles cannot delete GLOBAL
+    if user_claims.user_claims.role != UserRole::Superadmin {
+        if p.scope == "GLOBAL" {
+            return Err(HttpError::unauthorized("Tidak boleh menghapus policy GLOBAL".to_string()));
+        }
+        if p.satker_id != Some(user_claims.user_claims.satker_id) {
+            return Err(HttpError::unauthorized("Tidak boleh".to_string()));
+        }
+    }
+
+    // business rule:
+    // - GLOBAL: hanya boleh hapus policy lama (bukan yang terbaru) dan harus ada >= 2 global policy
+    if p.scope == "GLOBAL" {
+        let mut globals: Vec<_> = policies.into_iter().filter(|x| x.scope == "GLOBAL").collect();
+        //globals.sort_by(|a, b| b.effective_from.cmp(&a.effective_from)); // desc
+        globals.sort_by(|a, b| b.created_at.cmp(&a.created_at)); // DESC by created_at
+
+        if globals.len() < 2 {
+            return Err(HttpError::bad_request("Global policy minimal harus 1. Tidak bisa dihapus.".to_string()));
+        }
+
+        let newest_id = globals[0].id;
+        if id == newest_id {
+            return Err(HttpError::bad_request("Tidak boleh menghapus policy GLOBAL yang terbaru.".to_string()));
+        }
+    }
+
+    // try delete
+    let res = app_state.db_client.delete_tukin_policy(id).await;
+    match res {
+        Ok(_) => Ok(Json(json!({ "status": "200" }))),
+        Err(e) => {
+            // FK RESTRICT bisa terjadi kalau policy sudah dipakai di tukin_calculations (policy_id ON DELETE RESTRICT)
+            // kita kasih message lebih ramah
+            if let sqlx::Error::Database(db_err) = &e {
+                if db_err.code().as_deref() == Some("23503") {
+                    return Err(HttpError::bad_request("Policy tidak bisa dihapus karena sudah dipakai pada perhitungan tukin.".to_string()));
+                }
+            }
+            Err(HttpError::server_error(e.to_string()))
+        }
+    }
+}
+
+
+

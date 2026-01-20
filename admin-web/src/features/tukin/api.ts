@@ -50,3 +50,8 @@ export async function fetchLeaveRules(policyId: string): Promise<LeaveRulesResp[
 export async function saveLeaveRules(policyId: string, payload: SaveLeaveRulesReq): Promise<void> {
   await http.put(`/tukin/policies/${policyId}/leave-rules`, payload)
 }
+
+export async function deleteTukinPolicy(id: string): Promise<void> {
+  await http.delete(`/tukin/policies/${id}`)
+}
+

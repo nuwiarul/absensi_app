@@ -76,11 +76,14 @@ pub trait TukinRepo {
     // cache
     async fn upsert_tukin_calculation(&self, row: TukinCalculationUpsert) -> Result<TukinCalculationDto, Error>;
     async fn list_tukin_calculations(&self, month: NaiveDate, satker_id: Option<Uuid>, user_id: Option<Uuid>) -> Result<Vec<TukinCalculationRowDto>, Error>;
+
+    async fn delete_tukin_policy(&self, policy_id: Uuid) -> Result<(), Error>;
+
 }
 
 #[async_trait]
 impl TukinRepo for DBClient {
-    async fn find_active_tukin_policy(&self, satker_id: Uuid, period_start: NaiveDate) -> Result<TukinPolicyDto, Error> {
+    /*async fn find_active_tukin_policy(&self, satker_id: Uuid, period_start: NaiveDate) -> Result<TukinPolicyDto, Error> {
         // 1) SATKER policy (most recent effective_from)
         if let Some(row) = sqlx::query_as!(
             TukinPolicyDto,
@@ -144,6 +147,83 @@ impl TukinRepo for DBClient {
             .await?;
 
         Ok(row)
+    }*/
+
+    async fn find_active_tukin_policy(
+        &self,
+        satker_id: Uuid,
+        period_start: NaiveDate,
+    ) -> Result<TukinPolicyDto, Error> {
+        // 1) SATKER policy (most recent effective_from)
+        if let Some(row) = sqlx::query_as!(
+        TukinPolicyDto,
+        r#"
+        SELECT
+          p.id,
+          p.scope,
+          p.satker_id,
+          s.code as "satker_code?",
+          s.name as "satker_name?",
+          p.effective_from,
+          p.effective_to,
+          p.missing_checkout_penalty_pct::float8 as "missing_checkout_penalty_pct!",
+          p.late_tolerance_minutes,
+          p.late_penalty_per_minute_pct::float8 as "late_penalty_per_minute_pct!",
+          p.max_daily_penalty_pct::float8 as "max_daily_penalty_pct!",
+          p.out_of_geofence_penalty_pct::float8 as "out_of_geofence_penalty_pct!",
+          p.created_at,
+          p.updated_at
+        FROM tukin_policies p
+        LEFT JOIN satkers s ON s.id = p.satker_id
+        WHERE p.scope = 'SATKER'
+          AND p.satker_id = $1
+          AND p.effective_from <= $2
+          AND (p.effective_to IS NULL OR p.effective_to >= $2)
+        ORDER BY p.effective_from DESC, p.created_at DESC
+        LIMIT 1
+        "#,
+        satker_id,
+        period_start
+    )
+            .fetch_optional(&self.pool)
+            .await?
+        {
+            return Ok(row);
+        }
+
+        // 2) GLOBAL policy
+        let row = sqlx::query_as!(
+        TukinPolicyDto,
+        r#"
+        SELECT
+          p.id,
+          p.scope,
+          p.satker_id,
+          s.code as "satker_code?",
+          s.name as "satker_name?",
+          p.effective_from,
+          p.effective_to,
+          p.missing_checkout_penalty_pct::float8 as "missing_checkout_penalty_pct!",
+          p.late_tolerance_minutes,
+          p.late_penalty_per_minute_pct::float8 as "late_penalty_per_minute_pct!",
+          p.max_daily_penalty_pct::float8 as "max_daily_penalty_pct!",
+          p.out_of_geofence_penalty_pct::float8 as "out_of_geofence_penalty_pct!",
+          p.created_at,
+          p.updated_at
+        FROM tukin_policies p
+        LEFT JOIN satkers s ON s.id = p.satker_id
+        WHERE p.scope = 'GLOBAL'
+          AND p.effective_from <= $1
+          AND (p.effective_to IS NULL OR p.effective_to >= $1)
+        ORDER BY p.effective_from DESC, p.created_at DESC
+        LIMIT 1
+        "#,
+        period_start
+    )
+            .fetch_one(&self.pool)
+            .await?;
+
+        Ok(row)
     }
 
     async fn list_tukin_policies(&self, satker_id: Option<Uuid>) -> Result<Vec<TukinPolicyDto>, Error> {
@@ -152,22 +232,31 @@ impl TukinRepo for DBClient {
             TukinPolicyDto,
             r#"
             SELECT
-              id,
-              scope,
-              satker_id,
-              effective_from,
-              effective_to,
-              missing_checkout_penalty_pct::float8 as "missing_checkout_penalty_pct!",
-              late_tolerance_minutes,
-              late_penalty_per_minute_pct::float8 as "late_penalty_per_minute_pct!",
-              max_daily_penalty_pct::float8 as "max_daily_penalty_pct!",
-              out_of_geofence_penalty_pct::float8 as "out_of_geofence_penalty_pct!",
-              created_at,
-              updated_at
-            FROM tukin_policies
-            WHERE scope='GLOBAL'
-               OR (scope='SATKER' AND ($1::uuid IS NULL OR satker_id = $1))
-            ORDER BY scope ASC, satker_id NULLS FIRST, effective_from DESC
+          p.id,
+          p.scope,
+          p.satker_id,
+
+          -- ✅ NEW
+          s.code as "satker_code?",
+          s.name as "satker_name?",
+
+          p.effective_from,
+          p.effective_to,
+          p.missing_checkout_penalty_pct::float8 as "missing_checkout_penalty_pct!",
+          p.late_tolerance_minutes,
+          p.late_penalty_per_minute_pct::float8 as "late_penalty_per_minute_pct!",
+          p.max_daily_penalty_pct::float8 as "max_daily_penalty_pct!",
+          p.out_of_geofence_penalty_pct::float8 as "out_of_geofence_penalty_pct!",
+          p.created_at,
+          p.updated_at
+        FROM tukin_policies p
+        LEFT JOIN satkers s ON s.id = p.satker_id
+        WHERE p.scope='GLOBAL'
+           OR (p.scope='SATKER' AND ($1::uuid IS NULL OR p.satker_id = $1))
+        ORDER BY
+          p.scope ASC,
+          p.satker_id NULLS FIRST,
+          p.created_at DESC
             "#,
             satker_id
         )
@@ -177,7 +266,7 @@ impl TukinRepo for DBClient {
         Ok(rows)
     }
 
-    async fn create_tukin_policy(&self, req: CreateTukinPolicyReq) -> Result<TukinPolicyDto, Error> {
+    /*async fn create_tukin_policy(&self, req: CreateTukinPolicyReq) -> Result<TukinPolicyDto, Error> {
         let row = sqlx::query_as!(
             TukinPolicyDto,
             r#"
@@ -230,9 +319,79 @@ impl TukinRepo for DBClient {
             .await?;
 
         Ok(row)
+    }*/
+
+    async fn create_tukin_policy(&self, req: CreateTukinPolicyReq) -> Result<TukinPolicyDto, Error> {
+        let rec = sqlx::query!(
+        r#"
+        INSERT INTO tukin_policies (
+          scope,
+          satker_id,
+          effective_from,
+          effective_to,
+          missing_checkout_penalty_pct,
+          late_tolerance_minutes,
+          late_penalty_per_minute_pct,
+          max_daily_penalty_pct,
+          out_of_geofence_penalty_pct
+        ) VALUES (
+          $1,
+          $2,
+          $3,
+          $4,
+          COALESCE($5, 25.0::DOUBLE PRECISION),
+          COALESCE($6, 0),
+          COALESCE($7, 0.0::DOUBLE PRECISION),
+          COALESCE($8, 100.0::DOUBLE PRECISION),
+          COALESCE($9, 0.0::DOUBLE PRECISION)
+        )
+        RETURNING id
+        "#,
+        req.scope,
+        req.satker_id,
+        req.effective_from,
+        req.effective_to,
+        req.missing_checkout_penalty_pct,
+        req.late_tolerance_minutes,
+        req.late_penalty_per_minute_pct,
+        req.max_daily_penalty_pct,
+        req.out_of_geofence_penalty_pct
+    )
+            .fetch_one(&self.pool)
+            .await?;
+
+        let row = sqlx::query_as!(
+        TukinPolicyDto,
+        r#"
+        SELECT
+          p.id,
+          p.scope,
+          p.satker_id,
+          s.code as "satker_code?",
+          s.name as "satker_name?",
+          p.effective_from,
+          p.effective_to,
+          p.missing_checkout_penalty_pct::float8 as "missing_checkout_penalty_pct!",
+          p.late_tolerance_minutes,
+          p.late_penalty_per_minute_pct::float8 as "late_penalty_per_minute_pct!",
+          p.max_daily_penalty_pct::float8 as "max_daily_penalty_pct!",
+          p.out_of_geofence_penalty_pct::float8 as "out_of_geofence_penalty_pct!",
+          p.created_at,
+          p.updated_at
+        FROM tukin_policies p
+        LEFT JOIN satkers s ON s.id = p.satker_id
+        WHERE p.id = $1
+        "#,
+        rec.id
+    )
+            .fetch_one(&self.pool)
+            .await?;
+
+        Ok(row)
     }
 
-    async fn update_tukin_policy(&self, policy_id: Uuid, req: UpdateTukinPolicyReq) -> Result<TukinPolicyDto, Error> {
+
+    /*async fn update_tukin_policy(&self, policy_id: Uuid, req: UpdateTukinPolicyReq) -> Result<TukinPolicyDto, Error> {
         let row = sqlx::query_as!(
             TukinPolicyDto,
             r#"
@@ -274,7 +433,70 @@ impl TukinRepo for DBClient {
             .await?;
 
         Ok(row)
+    }*/
+
+    async fn update_tukin_policy(
+        &self,
+        policy_id: Uuid,
+        req: UpdateTukinPolicyReq,
+    ) -> Result<TukinPolicyDto, Error> {
+        let rec = sqlx::query!(
+        r#"
+        UPDATE tukin_policies
+        SET
+          effective_from = $2,
+          effective_to = $3,
+          missing_checkout_penalty_pct = $4::DOUBLE PRECISION,
+          late_tolerance_minutes = $5,
+          late_penalty_per_minute_pct = $6,
+          max_daily_penalty_pct = $7,
+          out_of_geofence_penalty_pct = $8,
+          updated_at = now()
+        WHERE id = $1
+        RETURNING id
+        "#,
+        policy_id,
+        req.effective_from,
+        req.effective_to,
+        req.missing_checkout_penalty_pct,
+        req.late_tolerance_minutes,
+        req.late_penalty_per_minute_pct,
+        req.max_daily_penalty_pct,
+        req.out_of_geofence_penalty_pct
+    )
+            .fetch_one(&self.pool)
+            .await?;
+
+        let row = sqlx::query_as!(
+        TukinPolicyDto,
+        r#"
+        SELECT
+          p.id,
+          p.scope,
+          p.satker_id,
+          s.code as "satker_code?",
+          s.name as "satker_name?",
+          p.effective_from,
+          p.effective_to,
+          p.missing_checkout_penalty_pct::float8 as "missing_checkout_penalty_pct!",
+          p.late_tolerance_minutes,
+          p.late_penalty_per_minute_pct::float8 as "late_penalty_per_minute_pct!",
+          p.max_daily_penalty_pct::float8 as "max_daily_penalty_pct!",
+          p.out_of_geofence_penalty_pct::float8 as "out_of_geofence_penalty_pct!",
+          p.created_at,
+          p.updated_at
+        FROM tukin_policies p
+        LEFT JOIN satkers s ON s.id = p.satker_id
+        WHERE p.id = $1
+        "#,
+        rec.id
+    )
+            .fetch_one(&self.pool)
+            .await?;
+
+        Ok(row)
     }
+
 
     async fn list_leave_rules(&self, policy_id: Uuid) -> Result<Vec<TukinLeaveRuleDto>, Error> {
         let rows = sqlx::query_as!(
@@ -531,4 +753,15 @@ impl TukinRepo for DBClient {
 
         Ok(rows)
     }
+
+    async fn delete_tukin_policy(&self, policy_id: Uuid) -> Result<(), Error> {
+        sqlx::query!(
+        r#"DELETE FROM tukin_policies WHERE id = $1"#,
+        policy_id
+    )
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
 }

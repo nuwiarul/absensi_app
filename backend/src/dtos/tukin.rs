@@ -35,6 +35,10 @@ pub struct TukinPolicyDto {
     pub id: Uuid,
     pub scope: String,
     pub satker_id: Option<Uuid>,
+    // ✅ NEW (untuk tampil di UI)
+    pub satker_code: Option<String>,
+    pub satker_name: Option<String>,
+
     pub effective_from: NaiveDate,
     pub effective_to: Option<NaiveDate>,
 
