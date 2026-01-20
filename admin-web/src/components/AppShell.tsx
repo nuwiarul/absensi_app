@@ -15,6 +15,7 @@ function pageTitle(pathname: string) {
     if (pathname.startsWith("/users")) return "User"
     if (pathname.startsWith("/satker-heads")) return "Satker Head"
     if (pathname.startsWith("/working-days")) return "Working Days"
+    if (pathname.startsWith("/announcements")) return "Pengumuman"
     return "Dashboard"
 }
 

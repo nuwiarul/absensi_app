@@ -14,3 +14,4 @@ pub mod settings;
 pub mod rank;
 pub mod duty_schedule;
 pub mod tukin;
+pub mod announcement;
