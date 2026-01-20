@@ -167,3 +167,12 @@ pub struct CreateLeaveResp {
     pub status: &'static str,
     pub data: CreateLeaveDto,
 }
+
+#[derive(Debug, Deserialize, Clone, Validate)]
+pub struct QuickApproveLeaveReq {
+    pub user_id: Uuid,
+    #[validate(length(min = 1, message = "tipe ijin di butuhkan"))]
+    pub leave_type: String,
+    pub work_date: NaiveDate,
+    pub note: Option<String>,
+}

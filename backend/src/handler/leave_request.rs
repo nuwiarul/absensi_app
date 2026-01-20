@@ -4,7 +4,7 @@ use crate::constants::{LeaveStatus, LeaveType};
 use crate::database::leave_request::LeaveRequestRepo;
 use crate::database::satker::SatkerRepo;
 use crate::database::satker_head::SatkerHeadRepo;
-use crate::dtos::leave_request::{CreateLeaveDto, CreateLeaveReq, CreateLeaveResp, DecisionLeaveReq, LeaveRequestsResp, ListLeaveAdminQuery, ListMyLeaveQuery, ListPendingLeaveQuery, PendingLeaveDto, PendingLeaveResp};
+use crate::dtos::leave_request::{CreateLeaveDto, CreateLeaveReq, CreateLeaveResp, DecisionLeaveReq, LeaveRequestsResp, ListLeaveAdminQuery, ListMyLeaveQuery, ListPendingLeaveQuery, PendingLeaveDto, PendingLeaveResp, QuickApproveLeaveReq};
 use crate::dtos::satker::{CreateSatkerReq, SatkerDto};
 use crate::dtos::user::UserDto;
 use crate::error::HttpError;
@@ -17,6 +17,7 @@ use std::future::pending;
 use std::sync::Arc;
 use uuid::Uuid;
 use validator::Validate;
+use crate::database::user::UserRepo;
 use crate::dtos::SuccessResponse;
 
 pub fn leave_request_handler() -> Router {
@@ -28,6 +29,7 @@ pub fn leave_request_handler() -> Router {
         .route("/decided", get(list_decided_leaves))
         .route("/{id}/approve", post(approve_leave))
         .route("/{id}/reject", post(reject_leave))
+        .route("/quick-approve", post(quick_approve_leave))
 }
 
 pub async fn create_leave(
@@ -43,6 +45,8 @@ pub async fn create_leave(
         .leave_type
         .parse::<LeaveType>()
         .map_err(|_| HttpError::bad_request("tipe ijin invalid".to_string()))?;
+
+    
 
     let row = app_state
         .db_client
@@ -435,4 +439,91 @@ async fn decide_leave(
 
     Ok(Json(response))
 
+}
+
+pub async fn quick_approve_leave(
+    Extension(app_state): Extension<Arc<AppState>>,
+    Extension(user_claims): Extension<AuthMiddleware>,
+    Json(payload): Json<QuickApproveLeaveReq>,
+) -> Result<impl IntoResponse, HttpError> {
+
+    payload.validate().map_err(|e| HttpError::bad_request(e.to_string()))?;
+
+    if !user_claims.user_claims.role.can_approve_leave() {
+        return Err(HttpError::unauthorized("Forbidden, anda tidak berhak akses request ini"));
+    }
+
+    let leave_type = payload.leave_type.parse::<LeaveType>()
+        .map_err(|_| HttpError::bad_request("tipe ijin invalid".to_string()))?;
+
+    // Restrict sesuai kebutuhan tukin quick-approve
+    if !matches!(leave_type, LeaveType::DinasLuar | LeaveType::Ijin | LeaveType::Sakit) {
+        return Err(HttpError::bad_request("Quick approve hanya untuk DINAS_LUAR/IJIN/SAKIT".to_string()));
+    }
+
+    // Cari user target + satker
+    let target_user = if user_claims.user_claims.role == UserRole::Superadmin {
+        app_state.db_client
+            .find_user_by_id(payload.user_id)
+            .await
+            .map_err(|e| HttpError::server_error(e.to_string()))?
+    } else {
+        // non-superadmin wajib satker sama
+        app_state.db_client
+            .find_user_by_satker(payload.user_id, user_claims.user_claims.satker_id)
+            .await
+            .map_err(|e| HttpError::server_error(e.to_string()))?
+    }.ok_or(HttpError::bad_request("User tidak ditemukan".to_string()))?;
+
+    // Cek sudah ada APPROVED overlap di tanggal itu?
+    let exists = sqlx::query_scalar!(
+        r#"
+        SELECT 1 as "one!"
+        FROM leave_requests
+        WHERE user_id = $1
+          AND status = 'APPROVED'
+          AND start_date <= $2
+          AND end_date >= $2
+        LIMIT 1
+        "#,
+        target_user.id,
+        payload.work_date
+    )
+        .fetch_optional(&app_state.db_client.pool)
+        .await
+        .map_err(|e| HttpError::server_error(e.to_string()))?
+        .is_some();
+
+    if exists {
+        return Err(HttpError::bad_request("Sudah ada leave APPROVED pada tanggal tersebut".to_string()));
+    }
+
+    // Create leave request (SUBMITTED)
+    let row = app_state.db_client
+        .create_leave_request(
+            target_user.satker_id,
+            target_user.id,
+            leave_type,
+            payload.work_date,
+            payload.work_date,
+            None, // reason: kosong, karena auto dari edit absensi
+        )
+        .await
+        .map_err(|e| HttpError::server_error(e.to_string()))?;
+
+    // Approve langsung + simpan note (decision_note)
+    app_state.db_client
+        .approve_or_reject_leave(
+            row.id,
+            user_claims.user_claims.user_id,
+            LeaveStatus::Approved,
+            payload.note.map(|s| s.trim().to_string()).filter(|s| !s.is_empty()),
+        )
+        .await
+        .map_err(|e| HttpError::server_error(e.to_string()))?;
+
+    Ok(Json(SuccessResponse {
+        status: "200".to_string(),
+        data: "Leave berhasil di-approve (auto)".to_string(),
+    }))
 }

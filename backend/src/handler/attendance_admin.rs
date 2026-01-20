@@ -67,6 +67,22 @@ pub async fn upsert_admin(
         .validate()
         .map_err(|e| HttpError::bad_request(e.to_string()))?;
 
+    // VALIDASI: untuk edit/tambah absensi manual, check-in wajib diisi
+    if payload.check_in_at.is_none() {
+        return Err(HttpError::bad_request(
+            "check_in_at wajib diisi untuk edit/tambah absensi".to_string(),
+        ));
+    }
+
+    // VALIDASI tambahan: jika kedua waktu diisi, check-out tidak boleh lebih awal
+    if let (Some(cin), Some(cout)) = (payload.check_in_at, payload.check_out_at) {
+        if cout < cin {
+            return Err(HttpError::bad_request(
+                "check_out_at tidak boleh lebih awal dari check_in_at".to_string(),
+            ));
+        }
+    }
+
     let user = app_state
         .db_client
         .find_user_by_id(user_id)
