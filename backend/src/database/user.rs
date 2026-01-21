@@ -38,6 +38,17 @@ pub trait UserRepo {
         phone: Option<String>,
     ) -> Result<(), Error>;
 
+    async fn update_my_profile(
+        &self,
+        id: Uuid,
+        full_name: String,
+        phone: Option<String>,
+    ) -> Result<(), Error>;
+
+    async fn update_password_hash(&self, id: Uuid, password_hash: String) -> Result<(), Error>;
+
+    async fn update_profile_photo_key(&self, id: Uuid, profile_photo_key: Option<String>) -> Result<(), Error>;
+
     async fn delete_user(&self, id: Uuid) -> Result<(), Error>;
 
     async fn set_satker_head(&self, id: Uuid) -> Result<(), Error>;
@@ -52,7 +63,7 @@ impl UserRepo for DBClient {
             User,
             r#"
             SELECT
-            id, satker_id, rank_id, nrp, full_name, email, phone, role as "role: UserRole",
+            id, satker_id, rank_id, nrp, full_name, email, phone, profile_photo_key, role as "role: UserRole",
             password_hash, is_active, face_template_version, face_template_hash, created_at, updated_at
             FROM users WHERE id = $1
             "#,
@@ -67,7 +78,7 @@ impl UserRepo for DBClient {
             User,
             r#"
             SELECT
-            id, satker_id, rank_id, nrp, full_name, email, phone, role as "role: UserRole",
+            id, satker_id, rank_id, nrp, full_name, email, phone, profile_photo_key, role as "role: UserRole",
             password_hash, is_active, face_template_version, face_template_hash, created_at, updated_at
             FROM users WHERE nrp = $1
             "#,
@@ -82,7 +93,7 @@ impl UserRepo for DBClient {
             User,
             r#"
             SELECT
-            id, satker_id, rank_id, nrp, full_name, email, phone, role as "role: UserRole",
+            id, satker_id, rank_id, nrp, full_name, email, phone, profile_photo_key, role as "role: UserRole",
             password_hash, is_active, face_template_version, face_template_hash, created_at, updated_at
             FROM users WHERE id = $1 AND satker_id = $2 AND is_active = true
             "#,
@@ -107,9 +118,9 @@ impl UserRepo for DBClient {
         let row = sqlx::query_as!(
             User,
             r#"
-            INSERT INTO users (satker_id, rank_id, nrp, full_name, email, phone, role, password_hash)
-            VALUES ($1, $2, $3, $4, $5, $6, $7::user_role, $8)
-            RETURNING id, satker_id, rank_id, nrp, full_name, email, phone, role as "role: UserRole",
+            INSERT INTO users (satker_id, rank_id, nrp, full_name, email, phone, profile_photo_key, role, password_hash)
+            VALUES ($1, $2, $3, $4, $5, $6, NULL, $7::user_role, $8)
+            RETURNING id, satker_id, rank_id, nrp, full_name, email, phone, profile_photo_key, role as "role: UserRole",
             password_hash, is_active, face_template_version, face_template_hash, created_at, updated_at
             "#,
             satker_id,
@@ -130,7 +141,7 @@ impl UserRepo for DBClient {
         let rows = sqlx::query_as!(
             User,
             r#"
-            SELECT id, satker_id, rank_id, nrp, full_name, email, phone, role as "role: UserRole",
+            SELECT id, satker_id, rank_id, nrp, full_name, email, phone, profile_photo_key, role as "role: UserRole",
             password_hash, is_active, face_template_version, face_template_hash, created_at, updated_at
             FROM users
             "#
@@ -142,7 +153,7 @@ impl UserRepo for DBClient {
         let rows = sqlx::query_as!(
             User,
             r#"
-            SELECT id, satker_id, rank_id, nrp, full_name, email, phone, role as "role: UserRole",
+            SELECT id, satker_id, rank_id, nrp, full_name, email, phone, profile_photo_key, role as "role: UserRole",
             password_hash, is_active, face_template_version, face_template_hash, created_at, updated_at
             FROM users
             WHERE satker_id = $1
@@ -212,7 +223,7 @@ impl UserRepo for DBClient {
             User,
             r#"
             SELECT
-            id, satker_id, rank_id, nrp, full_name, email, phone, role as "role: UserRole",
+            id, satker_id, rank_id, nrp, full_name, email, phone, profile_photo_key, role as "role: UserRole",
             password_hash, is_active, face_template_version, face_template_hash, created_at, updated_at
             FROM users WHERE satker_id = $1 AND role= 'SATKER_HEAD'
             "#,
@@ -220,5 +231,60 @@ impl UserRepo for DBClient {
         ).fetch_optional(&self.pool)
             .await?;
         Ok(row)
+    }
+
+    async fn update_my_profile(
+        &self,
+        id: Uuid,
+        full_name: String,
+        phone: Option<String>,
+    ) -> Result<(), Error> {
+        sqlx::query!(
+            r#"
+            UPDATE users
+            SET full_name = $2,
+                phone = $3,
+                updated_at = NOW()
+            WHERE id = $1
+            "#,
+            id,
+            full_name,
+            phone,
+        )
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    async fn update_password_hash(&self, id: Uuid, password_hash: String) -> Result<(), Error> {
+        sqlx::query!(
+            r#"
+            UPDATE users
+            SET password_hash = $2,
+                updated_at = NOW()
+            WHERE id = $1
+            "#,
+            id,
+            password_hash,
+        )
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    async fn update_profile_photo_key(&self, id: Uuid, profile_photo_key: Option<String>) -> Result<(), Error> {
+        sqlx::query!(
+            r#"
+            UPDATE users
+            SET profile_photo_key = $2,
+                updated_at = NOW()
+            WHERE id = $1
+            "#,
+            id,
+            profile_photo_key,
+        )
+            .execute(&self.pool)
+            .await?;
+        Ok(())
     }
 }

@@ -15,6 +15,7 @@ pub struct User {
     pub phone: Option<String>,
     pub role: UserRole,
     pub password_hash: String,
+    pub profile_photo_key: Option<String>,
     pub is_active: bool,
     pub face_template_version: i32,
     pub face_template_hash: Option<String>,

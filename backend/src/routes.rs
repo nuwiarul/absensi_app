@@ -21,6 +21,7 @@ use axum::{Extension, Router, middleware};
 use std::sync::Arc;
 use tower_http::trace::TraceLayer;
 use crate::handler::announcement::announcement_handler;
+use crate::handler::dashboard::dashboard_handler;
 use crate::handler::tukin::tukin_handler;
 
 async fn health() -> &'static str {
@@ -97,6 +98,10 @@ pub fn create_router(app_state: Arc<AppState>) -> Router {
         .nest(
             "/announcements",
             announcement_handler().layer(middleware::from_fn(auth_middleware)),
+        )
+        .nest(
+            "/dashboard",
+            dashboard_handler().layer(middleware::from_fn(auth_middleware)),
         )
         .route("/health", get(health))
         .layer(TraceLayer::new_for_http())

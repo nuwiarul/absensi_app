@@ -38,6 +38,8 @@ import { useDeleteUser, useUsers } from "@/features/users/hooks"
 import type { User } from "@/features/users/types"
 import { cn } from "@/lib/utils"
 import { UserFormDialog } from "@/features/users/UserFormDialog"
+import { UserSecurityDialog } from "@/features/users/UserSecurityDialog"
+import { AuthedAvatar } from "@/components/AuthedAvatar"
 import { apiErrorMessage } from "@/lib/api-error"
 import { getSession } from "@/lib/auth"
 
@@ -47,6 +49,7 @@ export default function UsersPage() {
     const sessionRole = session?.role
     const sessionSatkerId = session?.satkerId ?? ""
     const isSuper = sessionRole === "SUPERADMIN"
+    const canAdmin = sessionRole === "SUPERADMIN" || sessionRole === "SATKER_ADMIN"
     //const { data: users = [], isLoading, isError, error } = useUsers()
     const { data: satkers = [], isLoading: satkerLoading, isError: satkerIsError, error: satkerError } = useSatkers()
     const del = useDeleteUser()
@@ -76,6 +79,10 @@ export default function UsersPage() {
     const [createOpen, setCreateOpen] = React.useState(false)
     const [editOpen, setEditOpen] = React.useState(false)
     const [editing, setEditing] = React.useState<User | null>(null)
+
+    const [securityOpen, setSecurityOpen] = React.useState(false)
+    const [securityUser, setSecurityUser] = React.useState<User | null>(null)
+    const [securityMode, setSecurityMode] = React.useState<"password" | "photo">("password")
 
     const filtered = React.useMemo(() => {
         const query = q.trim().toLowerCase()
@@ -215,7 +222,12 @@ export default function UsersPage() {
                                 filtered.map((u) => (
                                     <TableRow key={u.id}>
                                         <TableCell className="font-medium">{u.nrp}</TableCell>
-                                        <TableCell>{u.full_name}</TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-3">
+                                                <AuthedAvatar objectKey={u.profile_photo_key} alt={u.full_name} size={32} />
+                                                <span>{u.full_name}</span>
+                                            </div>
+                                        </TableCell>
                                         <TableCell className="truncate max-w-[240px]">{u.email}</TableCell>
                                         <TableCell>
                                             {u.satker?.code} - {u.satker?.name}
@@ -246,6 +258,33 @@ export default function UsersPage() {
                                             >
                                                 Edit
                                             </Button>
+
+                                            {canAdmin ? (
+                                                <>
+                                                    <Button
+                                                        variant="secondary"
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            setSecurityMode("password")
+                                                            setSecurityUser(u)
+                                                            setSecurityOpen(true)
+                                                        }}
+                                                    >
+                                                        Ganti Password
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            setSecurityMode("photo")
+                                                            setSecurityUser(u)
+                                                            setSecurityOpen(true)
+                                                        }}
+                                                    >
+                                                        Ganti Foto
+                                                    </Button>
+                                                </>
+                                            ) : null}
 
                                             <AlertDialog>
                                                 <AlertDialogTrigger asChild>
@@ -298,6 +337,17 @@ export default function UsersPage() {
                     if (!v) setEditing(null)
                 }}
             />
+
+
+            <UserSecurityDialog
+                open={securityOpen}
+                onOpenChange={(v) => {
+                    setSecurityOpen(v)
+                    if (!v) setSecurityUser(null)
+                }}
+                user={securityUser ?? undefined}
+                mode={securityMode}
+            />
         </Card>
     )
 }
@@ -338,11 +388,13 @@ import {
 } from "@/components/ui/alert-dialog"
 
 import { useSatkers } from "@/features/satkers/hooks"
+import { useRanks } from "@/features/ranks/hooks"
 import { SatkerSelect } from "@/features/users/SatkerSelect"
 import { useDeleteUser, useUsers } from "@/features/users/hooks"
 import type { User } from "@/features/users/types"
 import { cn } from "@/lib/utils"
 import { UserFormDialog } from "@/features/users/UserFormDialog"
+import { UserSecurityDialog } from "@/features/users/UserSecurityDialog"
 import { apiErrorMessage } from "@/lib/api-error"
 import { getSession } from "@/lib/auth"
 
@@ -352,9 +404,17 @@ export default function UsersPage() {
     const sessionRole = session?.role
     const sessionSatkerId = session?.satkerId ?? ""
     const isSuper = sessionRole === "SUPERADMIN"
+    const canAdmin = sessionRole === "SUPERADMIN" || sessionRole === "SATKER_ADMIN"
     //const { data: users = [], isLoading, isError, error } = useUsers()
     const { data: satkers = [], isLoading: satkerLoading, isError: satkerIsError, error: satkerError } = useSatkers()
     const del = useDeleteUser()
+    const { data: ranks = [] } = useRanks()
+
+    const rankMap = React.useMemo(() => {
+        const m = new Map<string, string>()
+        ranks.forEach((r) => m.set(r.id, `${r.code} - ${r.name}`))
+        return m
+    }, [ranks])
 
     const [q, setQ] = React.useState("")
     const [satkerFilter, setSatkerFilter] = React.useState<string>(
@@ -374,6 +434,9 @@ export default function UsersPage() {
     const [createOpen, setCreateOpen] = React.useState(false)
     const [editOpen, setEditOpen] = React.useState(false)
     const [editing, setEditing] = React.useState<User | null>(null)
+
+    const [securityOpen, setSecurityOpen] = React.useState(false)
+    const [securityUser, setSecurityUser] = React.useState<User | null>(null)
 
     const filtered = React.useMemo(() => {
         const query = q.trim().toLowerCase()
@@ -489,6 +552,7 @@ export default function UsersPage() {
                                 <TableHead>Nama</TableHead>
                                 <TableHead>Email</TableHead>
                                 <TableHead>Satker</TableHead>
+                                <TableHead>Pangkat</TableHead>
                                 <TableHead>Role</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead className="text-right">Aksi</TableHead>
@@ -498,13 +562,13 @@ export default function UsersPage() {
                         <TableBody>
                             {isLoading ? (
                                 <TableRow>
-                                    <TableCell colSpan={7} className="py-6 text-center text-sm text-muted-foreground">
+                                    <TableCell colSpan={8} className="py-6 text-center text-sm text-muted-foreground">
                                         Memuat...
                                     </TableCell>
                                 </TableRow>
                             ) : filtered.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={7} className="py-6 text-center text-sm text-muted-foreground">
+                                    <TableCell colSpan={8} className="py-6 text-center text-sm text-muted-foreground">
                                         Tidak ada data
                                     </TableCell>
                                 </TableRow>
@@ -516,6 +580,9 @@ export default function UsersPage() {
                                         <TableCell className="truncate max-w-[240px]">{u.email}</TableCell>
                                         <TableCell>
                                             {u.satker?.code} - {u.satker?.name}
+                                        </TableCell>
+                                        <TableCell className="max-w-[220px] truncate">
+                                            {u.rank_id ? (rankMap.get(u.rank_id) ?? "-") : "-"}
                                         </TableCell>
                                         <TableCell>{u.role}</TableCell>
                                         <TableCell>
@@ -540,6 +607,19 @@ export default function UsersPage() {
                                             >
                                                 Edit
                                             </Button>
+
+                                            {canAdmin ? (
+                                                <Button
+                                                    variant="secondary"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        setSecurityUser(u)
+                                                        setSecurityOpen(true)
+                                                    }}
+                                                >
+                                                    Password/Foto
+                                                </Button>
+                                            ) : null}
 
                                             <AlertDialog>
                                                 <AlertDialogTrigger asChild>
@@ -592,7 +672,19 @@ export default function UsersPage() {
                     if (!v) setEditing(null)
                 }}
             />
+
+
+            <UserSecurityDialog
+                open={securityOpen}
+                onOpenChange={(v) => {
+                    setSecurityOpen(v)
+                    if (!v) setSecurityUser(null)
+                }}
+                user={securityUser ?? undefined}
+            />
         </Card>
     )
 }
+
+
 */

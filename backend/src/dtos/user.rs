@@ -49,6 +49,37 @@ pub struct UpdateUserReq {
     pub phone: Option<String>,
 }
 
+#[derive(Deserialize, Debug, Clone, Validate)]
+pub struct UpdateMyProfileReq {
+    #[validate(length(min = 1, message = "full_name di butuhkan"))]
+    pub full_name: String,
+    pub phone: Option<String>,
+}
+
+#[derive(Deserialize, Debug, Clone, Validate)]
+pub struct ChangeMyPasswordReq {
+    #[validate(length(min = 8, max = 64, message = "password harus di antara 8 sampai 64 karakter."))]
+    pub old_password: String,
+    #[validate(length(min = 8, max = 64, message = "password harus di antara 8 sampai 64 karakter."))]
+    pub password: String,
+    #[validate(
+        length(min = 8, max = 64, message = "password harus di antara 8 sampai 64 karakter."),
+        must_match(other = "password", message = "password tidak sama")
+    )]
+    pub password_confirm: String,
+}
+
+#[derive(Deserialize, Debug, Clone, Validate)]
+pub struct AdminSetPasswordReq {
+    #[validate(length(min = 8, max = 64, message = "password harus di antara 8 sampai 64 karakter."))]
+    pub password: String,
+    #[validate(
+        length(min = 8, max = 64, message = "password harus di antara 8 sampai 64 karakter."),
+        must_match(other = "password", message = "password tidak sama")
+    )]
+    pub password_confirm: String,
+}
+
 #[derive(Serialize, Debug, Clone)]
 pub struct UserDto {
     pub id: Uuid,
@@ -58,6 +89,7 @@ pub struct UserDto {
     pub full_name: String,
     pub email: Option<String>,
     pub phone: Option<String>,
+    pub profile_photo_key: Option<String>,
     pub role: UserRole,
     pub is_active: bool,
 }
@@ -73,6 +105,7 @@ impl UserDto {
             full_name: row.full_name.clone(),
             email: row.email.clone(),
             phone: row.phone.clone(),
+            profile_photo_key: row.profile_photo_key.clone(),
             role: row.role,
             is_active: row.is_active,
         }
@@ -93,6 +126,7 @@ impl UserDto {
             full_name: row.full_name.clone(),
             email: row.email.clone(),
             phone: row.phone.clone(),
+            profile_photo_key: row.profile_photo_key.clone(),
             role: row.role,
             is_active: row.is_active,
         }

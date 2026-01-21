@@ -23,6 +23,7 @@ pub mod attendance_admin;
 pub mod duty_schedule;
 pub mod tukin;
 pub mod announcement;
+pub mod dashboard;
 
 #[derive(Debug, Serialize)]
 pub struct SuccessResponse {

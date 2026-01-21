@@ -20,6 +20,9 @@ import TukinCalculationsPage from "@/pages/TukinCalculationsPage"
 import TukinPolicyPage from "@/pages/TukinPolicyPage"
 import TukinCalculationDetailPage from "@/pages/TukinCalculationDetailPage"
 import AnnouncementsPage from "@/pages/AnnouncementsPage"
+import ProfilePage from "@/pages/ProfilePage"
+import ChangePasswordPage from "@/pages/ChangePasswordPage"
+import DashboardPage from "@/pages/DashboardPage"
 //import WorkPatternsPage from "@/pages/WorkPatternsPage"*/
 
 export const router = createBrowserRouter([
@@ -31,7 +34,8 @@ export const router = createBrowserRouter([
             {
                 element: <AppShell />,
                 children: [
-                    { path: "/", element: <SatkersPage /> },
+                    { path: "/", element: <DashboardPage /> },
+                    { path: "/dashboard", element: <DashboardPage /> },
                     { path: "/satkers", element: <SatkersPage /> },
                     { path: "/users", element: <UsersPage /> },
                     { path: "/satker-heads", element: <SatkerHeadsPage /> },
@@ -50,6 +54,8 @@ export const router = createBrowserRouter([
                     { path: "/announcements", element: <AnnouncementsPage /> },
                     { path: "/ranks", element: <RanksPage /> },
                     { path: "/settings", element: <SettingsPage /> },
+                    { path: "/profile", element: <ProfilePage /> },
+                    { path: "/change-password", element: <ChangePasswordPage /> },
                     /*{ path: "/working-days", element: <WorkPatternsPage /> },*/
                 ],
             },
