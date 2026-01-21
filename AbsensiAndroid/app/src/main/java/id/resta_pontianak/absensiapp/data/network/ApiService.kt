@@ -5,6 +5,7 @@ import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Multipart
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Part
 import retrofit2.http.Path
 import retrofit2.http.Query
@@ -73,4 +74,22 @@ interface ApiService {
         @Path("id") id: String,
         @Body req: LeaveDecisionReq
     ): ApiResponse<String>
+
+    @Multipart
+    @POST("users/me/photo")
+    suspend fun uploadProfilePhoto(
+        @Part file: MultipartBody.Part
+    ): UploadProfilePhotoResponse
+
+    @POST("users/me/password") // ✅ ADD
+    suspend fun changeMyPassword(
+        @Body body: ChangeMyPasswordReq
+    ): ApiResponse<String>
+
+    @GET("users/me")
+    suspend fun getMe(): UserMeResponse
+
+
+    @PUT("users/me/profile")
+    suspend fun updateMyProfile(@Body body: UpdateMyProfileReq): ApiResponse<String>
 }

@@ -21,5 +21,6 @@ data class LoginData(
     // ✅ NEW
     val role: String,
     val satker_name: String,
-    val satker_code: String
+    val satker_code: String,
+    val profile_photo_key: String
 )

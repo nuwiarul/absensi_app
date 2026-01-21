@@ -36,7 +36,8 @@ class AuthRepository(
                 // ✅ NEW
                 role = data.role,
                 satkerName = data.satker_name,
-                satkerCode = data.satker_code
+                satkerCode = data.satker_code,
+                profilePhotoKey = data.profile_photo_key
             )
             Result.success(Unit)
         } catch (e: Throwable) {

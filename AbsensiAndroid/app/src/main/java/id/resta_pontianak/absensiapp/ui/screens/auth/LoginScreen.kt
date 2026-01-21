@@ -1,5 +1,7 @@
 package id.resta_pontianak.absensiapp.ui.screens.auth
 
+
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,12 +21,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import id.resta_pontianak.absensiapp.R
 
 
 @Composable
@@ -39,8 +44,16 @@ fun LoginScreen(
             Modifier.fillMaxSize()
                 .background(Color(0xFFF5F7FB))
                 .padding(18.dp),
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Image(
+            painter = painterResource(id = R.drawable.logo_pontianak),
+            contentDescription = "Logo Polresta Pontianak",
+            modifier = Modifier
+                .size(140.dp)
+                .padding(bottom = 24.dp)
+        )
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(18.dp)
@@ -49,6 +62,7 @@ fun LoginScreen(
             Column(
                 modifier = Modifier.padding(18.dp)
             ) {
+
                 Text(
                     "POLRESTA PONTIANAK",
                     style = MaterialTheme.typography.headlineSmall,

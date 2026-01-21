@@ -14,6 +14,8 @@ import id.resta_pontianak.absensiapp.data.network.ApiService
 import id.resta_pontianak.absensiapp.data.network.AuthInterceptor
 import id.resta_pontianak.absensiapp.data.network.ClientChannelInterceptor
 import id.resta_pontianak.absensiapp.data.network.DeviceIdInterceptor
+import id.resta_pontianak.absensiapp.data.network.ProfileUrlProvider
+import id.resta_pontianak.absensiapp.data.network.ProfileUrlProviderImpl
 import id.resta_pontianak.absensiapp.data.network.SelfieUrlProvider
 import id.resta_pontianak.absensiapp.data.network.SelfieUrlProviderImpl
 import id.resta_pontianak.absensiapp.data.repo.AttendanceRepository
@@ -111,6 +113,12 @@ object AppModule {
     fun provideSelfieUrlProvider(
         impl: SelfieUrlProviderImpl
     ): SelfieUrlProvider = impl
+
+    @Provides
+    @Singleton
+    fun provideProfileUrlProvider(
+        impl: ProfileUrlProviderImpl
+    ): ProfileUrlProvider = impl
 
     @Provides
     @Singleton

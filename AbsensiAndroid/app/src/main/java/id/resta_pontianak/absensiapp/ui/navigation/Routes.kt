@@ -19,4 +19,8 @@ object Routes {
     const val AttendanceHistory = "attendance_history"
 
     const val Leave = "leave"
+
+    const val Account = "account"
+
+    const val Profile = "profile"
 }

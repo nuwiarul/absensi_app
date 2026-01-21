@@ -31,6 +31,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.sp
+import id.resta_pontianak.absensiapp.R
 
 
 
@@ -125,41 +131,59 @@ fun DashboardScreen(
 @Composable
 private fun Header(fullName: String, nrp: String, satkerName: String, onLogout: () -> Unit) {
     val topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+
     Box(
-        Modifier.fillMaxWidth().background(BlueHeader)
+        Modifier
+            .fillMaxWidth()
+            .background(BlueHeader)
             .padding(
-                start = 16.dp,
+                start = 0.dp,
                 end = 16.dp,
                 bottom = 16.dp,
                 top = topInset + 6.dp
             )
     ) {
-        Column() {
-            Text("Selamat Datang", color = Color.White)
-            Spacer(Modifier.height(6.dp))
-            Text(
-                fullName,
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.align(Alignment.TopStart)
+        ) {
+            // ✅ LOGO di kiri
+            Image(
+                painter = painterResource(id = R.drawable.logo_pontianak),
+                contentDescription = "Logo Polresta Pontianak",
+                modifier = Modifier.size(80.dp)
             )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                "NRP: $nrp",
-                color = Color.White.copy(alpha = 0.85f)
-            )
-            // ✅ NEW: satker_name tepat di bawah NRP
-            Spacer(Modifier.height(2.dp))
-            Text(
-                satkerName,
-                color = Color.White.copy(alpha = 0.85f)
-            )
+
+            Spacer(Modifier.width(6.dp))
+
+            Column {
+                Text("Selamat Datang", color = Color.White)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    fullName,
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    "NRP: $nrp",
+                    color = Color.White.copy(alpha = 0.85f),
+                    style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 14.sp)
+                )
+                Text(
+                    satkerName,
+                    color = Color.White.copy(alpha = 0.85f),
+                    style = MaterialTheme.typography.bodySmall.copy(lineHeight = 14.sp)
+                )
+            }
         }
+
         IconButton(
             onClick = onLogout,
-            modifier = Modifier.align(Alignment.TopEnd)
+            modifier = Modifier
+                .align(Alignment.TopEnd)
                 .size(48.dp)
                 .background(
-                    Color.White.copy( alpha = 0.12f),
+                    Color.White.copy(alpha = 0.12f),
                     RoundedCornerShape(24.dp)
                 )
         ) {
@@ -167,6 +191,7 @@ private fun Header(fullName: String, nrp: String, satkerName: String, onLogout: 
         }
     }
 }
+
 
 @Composable
 private fun AttendanceCard(

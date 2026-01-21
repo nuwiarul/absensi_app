@@ -20,6 +20,10 @@ class TokenStore(private val ctx: Context) {
     private val KEY_SATKER_NAME = stringPreferencesKey("satker_name")
     private val KEY_SATKER_CODE = stringPreferencesKey("satker_code")
 
+    private val KEY_PROFILE_PHOTO_KEY = stringPreferencesKey("profile_photo_key")
+
+    private val KEY_PHONE = stringPreferencesKey("phone")
+
     suspend fun saveSession(
         token: String,
         userId: String,
@@ -30,7 +34,8 @@ class TokenStore(private val ctx: Context) {
         // ✅ NEW
         role: String,
         satkerName: String,
-        satkerCode: String
+        satkerCode: String,
+        profilePhotoKey: String?
     ) {
         ctx.dataStore.edit {
             it[KEY_TOKEN] = token
@@ -43,12 +48,29 @@ class TokenStore(private val ctx: Context) {
             it[KEY_ROLE] = role
             it[KEY_SATKER_NAME] = satkerName
             it[KEY_SATKER_CODE] = satkerCode
+
+            if (!profilePhotoKey.isNullOrBlank()) {
+                it[KEY_PROFILE_PHOTO_KEY] = profilePhotoKey
+            } else {
+                it.remove(KEY_PROFILE_PHOTO_KEY)
+            }
         }
     }
 
     suspend fun getToken(): String? {
         val prefs = ctx.dataStore.data.first()
         return prefs[KEY_TOKEN]
+    }
+
+    suspend fun setFullName(fullName: String) {
+        ctx.dataStore.edit { it[KEY_FULLNAME] = fullName }
+    }
+
+    // ✅ ADD (opsional)
+    suspend fun setPhone(phone: String?) {
+        ctx.dataStore.edit {
+            if (phone.isNullOrBlank()) it.remove(KEY_PHONE) else it[KEY_PHONE] = phone
+        }
     }
 
     suspend fun getProfile(): LocalProfile? {
@@ -63,11 +85,14 @@ class TokenStore(private val ctx: Context) {
         val satkerName = prefs[KEY_SATKER_NAME]
         val satkerCode = prefs[KEY_SATKER_CODE]
 
+        val photoKey = prefs[KEY_PROFILE_PHOTO_KEY] // ✅ NEW
+
         return LocalProfile(
             uid, nrp, name, satker,
             role = role,
             satkerName = satkerName,
-            satkerCode = satkerCode
+            satkerCode = satkerCode,
+            profilePhotoKey = photoKey
         )
     }
 
@@ -83,6 +108,15 @@ class TokenStore(private val ctx: Context) {
             it.remove(KEY_ROLE)
             it.remove(KEY_SATKER_NAME)
             it.remove(KEY_SATKER_CODE)
+
+            it.remove(KEY_PROFILE_PHOTO_KEY)
+        }
+    }
+
+    suspend fun setProfilePhotoKey(key: String?) {
+        ctx.dataStore.edit {
+            if (!key.isNullOrBlank()) it[KEY_PROFILE_PHOTO_KEY] = key
+            else it.remove(KEY_PROFILE_PHOTO_KEY)
         }
     }
 }
@@ -96,5 +130,6 @@ data class LocalProfile(
     // ✅ NEW (nullable biar backward compatible)
     val role: String?,
     val satkerName: String?,
-    val satkerCode: String?
+    val satkerCode: String?,
+    val profilePhotoKey: String?
 )

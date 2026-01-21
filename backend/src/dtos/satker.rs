@@ -47,7 +47,7 @@ impl SatkerDto {
                 SatkerDto {
                     id: Uuid::nil(),
                     code: "".to_string(),
-                    name: "Not Found".to_string(),
+                    name: "-".to_string(),
                     is_active: false,
                 }
             })

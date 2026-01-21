@@ -18,6 +18,7 @@ use tokio::{fs, io::AsyncWriteExt};
 use uuid::Uuid;
 use validator::Validate;
 use crate::constants::{SUPERUSER_SATKER_ID, SUPERUSER_USER_ID};
+use crate::database::rank::RankRepo;
 
 pub fn user_handler() -> Router {
     Router::new()
@@ -210,7 +211,12 @@ pub async fn all_user_by_satker(
         .await
         .map_err(|e| HttpError::server_error(e.to_string()))?;
 
-    let users_dto = UserDto::to_rows_with_satker(&users, &satkers);
+    let ranks = app_state.db_client
+        .list_ranks()
+    .await
+    .map_err(|e| HttpError::server_error(e.to_string()))?;
+
+    let users_dto = UserDto::to_rows_with_satker(&users, &satkers, &ranks);
 
     Ok(Json(UsersResp {
         status: "200",
@@ -234,7 +240,12 @@ pub async fn all_user(
         .await
         .map_err(|e| HttpError::server_error(e.to_string()))?;
 
-    let users_dto = UserDto::to_rows_with_satker(&users, &satkers);
+    let ranks = app_state.db_client
+        .list_ranks()
+        .await
+        .map_err(|e| HttpError::server_error(e.to_string()))?;
+
+    let users_dto = UserDto::to_rows_with_satker(&users, &satkers, &ranks);
 
     Ok(Json(UsersResp {
         status: "200",
@@ -261,7 +272,12 @@ pub async fn find_user(
         .await
         .map_err(|e| HttpError::server_error(e.to_string()))?;
 
-    let user_dto = UserDto::to_row_with_satker(&user, &satkers);
+    let ranks = app_state.db_client
+        .list_ranks()
+        .await
+        .map_err(|e| HttpError::server_error(e.to_string()))?;
+
+    let user_dto = UserDto::to_row_with_satker(&user, &satkers, &ranks);
 
     Ok(Json(UserResp {
         status: "200",
@@ -290,7 +306,12 @@ pub async fn get_me(
         .await
         .map_err(|e| HttpError::server_error(e.to_string()))?;
 
-    let user_dto = UserDto::to_row_with_satker(&user, &satkers);
+    let ranks = app_state.db_client
+        .list_ranks()
+        .await
+        .map_err(|e| HttpError::server_error(e.to_string()))?;
+
+    let user_dto = UserDto::to_row_with_satker(&user, &satkers, &ranks);
 
     Ok(Json(UserResp { status: "200", data: user_dto }))
 }

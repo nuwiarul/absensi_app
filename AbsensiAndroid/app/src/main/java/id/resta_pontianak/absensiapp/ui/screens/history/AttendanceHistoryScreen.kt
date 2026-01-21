@@ -67,7 +67,8 @@ fun AttendanceHistoryScreen(
                 },
                 actions = {
                     TextButton(onClick = onResetMonth) { Text("Bulan Ini") }
-                }
+                },
+                windowInsets = WindowInsets(0, 0, 0, 0) // opsional: bikin lebih rapat ke atas
             )
         }
     ) { padding ->

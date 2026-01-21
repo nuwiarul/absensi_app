@@ -25,6 +25,7 @@ pub struct LoginDto {
     pub role: UserRole,
     pub satker_name: String,
     pub satker_code: String,
+    pub profile_photo_key: Option<String>,
 }
 
 impl LoginDto {
@@ -37,6 +38,7 @@ impl LoginDto {
             role: user.role,
             satker_name: satker.name.clone(),
             satker_code: satker.code.clone(),
+            profile_photo_key: user.profile_photo_key.clone(),
             token,
         }
     }

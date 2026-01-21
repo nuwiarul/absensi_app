@@ -29,6 +29,7 @@ import id.resta_pontianak.absensiapp.ui.screens.dashboard.DashboardRoute
 import java.net.URLDecoder
 import android.widget.Toast
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.platform.LocalContext
 import id.resta_pontianak.absensiapp.ui.helper.localizeBackendMessage
 import id.resta_pontianak.absensiapp.ui.screens.attendance.AttendanceLeaveRoute
@@ -36,10 +37,37 @@ import id.resta_pontianak.absensiapp.ui.screens.history.AttendanceHistoryRoute
 import id.resta_pontianak.absensiapp.ui.screens.leave.LeaveRoute
 import java.util.concurrent.atomic.AtomicBoolean
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.EventAvailable
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavDestination
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.compose.currentBackStackEntryAsState
+import id.resta_pontianak.absensiapp.ui.screens.account.AccountRoute
+import id.resta_pontianak.absensiapp.ui.screens.profile.ProfileRoute
+
+private val BottomNavBlue = Color(0xFF0B2A5A)
+
+
 @Composable
 fun AppNav(
     tokenStore: TokenStore,
 ) {
+
+
     val navController = rememberNavController()
 
     val context = LocalContext.current
@@ -109,194 +137,239 @@ fun AppNav(
         }
     }
 
-    NavHost(
-        navController = navController,
-        startDestination = startRoute!!
-    ) {
-        composable(Routes.Login) {
-            /*LoginRoute(
-                onLoginSuccess = navController::goToDashboardClearBackstack
-            )*/
-            LoginRoute(
-                onLoginSuccess = {
-                    unauthorizedGate.set(false) // ✅ reset supaya bisa muncul lagi jika nanti expired lagi
-                    navController.goToDashboardClearBackstack()
-                }
-            )
-        }
 
-        composable(Routes.Dashboard) {
-            DashboardRoute(
-                tokenStore = tokenStore,
-                onLogout = navController::goToLoginClearBackstack,
-                onGoTunkin = { /* nanti nav.navigate("tunkin") */ },
-                onGoSchedule = { /* nanti nav.navigate("schedule") */ },
-                onGoAttendance = { action ->
-                    // nanti: nav ke halaman absen lokasi/selfie
-                    // untuk sekarang bisa log/placeholder
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = backStackEntry?.destination?.route
 
-                    if (action == AttendanceAction.CheckIn) {
-                        navController.navigate(Routes.AttendanceMapCheckIn)
-                    } else {
-                        navController.navigate(Routes.AttendanceMapCheckOut)
+    val currentDestination = backStackEntry?.destination
+
+    /*val showBottomBar = currentRoute != Routes.Login &&
+            // hide juga saat sedang proses absen (map/liveness/error/success)
+            (currentRoute?.startsWith(Routes.AttendanceGraph) != true) &&
+            currentRoute != Routes.Profile*/
+
+    val showBottomBar = isBottomBarVisible(currentRoute)
+
+    Scaffold(
+        bottomBar = {
+            if (showBottomBar) {
+                BottomBar(
+                    //currentRoute = currentRoute,
+                    currentDestination = currentDestination,
+                    onNavigate = { route ->
+                        navController.navigate(route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
-                },
-                onRiwayatAbsen = {
-                    navController.navigate(Routes.AttendanceHistory)
-                },
-                onIjin = {
-                    navController.navigate(Routes.Leave)
-                }
-
-            )
+                )
+            }
         }
+    ) { innerPadding ->
 
-        composable(Routes.AttendanceHistory) {
-            AttendanceHistoryRoute(onBack = { navController.popBackStack() })
-        }
-
-        composable(Routes.Leave) {
-            LeaveRoute(onBack = { navController.popBackStack() })
-        }
-
-        // ✅ Attendance nested graph (Shared VM scoped di sini)
-
-        navigation(
-            startDestination = "${Routes.AttendanceGraph}/${Routes.AttendanceMap}/{action}",
-            route = Routes.AttendanceGraph
+        NavHost(
+            navController = navController,
+            startDestination = startRoute!!,
+            modifier = Modifier
+                .fillMaxSize()
+                .then(if (showBottomBar) Modifier.padding(innerPadding) else Modifier)
         ) {
-            composable("${Routes.AttendanceGraph}/${Routes.AttendanceMap}/{action}") { backStackEntry  ->
-                val a = backStackEntry.arguments?.getString("action") ?: "in"
-                val action = if (a == "out") AttendanceAction.CheckOut else AttendanceAction.CheckIn
+            composable(Routes.Login) {
+                /*LoginRoute(
+                    onLoginSuccess = navController::goToDashboardClearBackstack
+                )*/
+                LoginRoute(
+                    onLoginSuccess = {
+                        unauthorizedGate.set(false) // ✅ reset supaya bisa muncul lagi jika nanti expired lagi
+                        navController.goToDashboardClearBackstack()
+                    }
+                )
+            }
 
-                AttendanceMapRoute(
-                    navController = navController,   // ✅ pass navController
-                    backStackEntry = backStackEntry,   // ✅ tambah ini
-                    action = action,
-                    onCancel = { navController.popBackStack() },
-                    onContinue = {
-                        navController.navigate("${Routes.AttendanceGraph}/${Routes.Liveness}")
+            composable(Routes.Dashboard) {
+                DashboardRoute(
+                    tokenStore = tokenStore,
+                    onLogout = navController::goToLoginClearBackstack,
+                    onGoTunkin = { /* nanti nav.navigate("tunkin") */ },
+                    onGoSchedule = { /* nanti nav.navigate("schedule") */ },
+                    onGoAttendance = { action ->
+                        // nanti: nav ke halaman absen lokasi/selfie
+                        // untuk sekarang bisa log/placeholder
+
+                        if (action == AttendanceAction.CheckIn) {
+                            navController.navigate(Routes.AttendanceMapCheckIn)
+                        } else {
+                            navController.navigate(Routes.AttendanceMapCheckOut)
+                        }
                     },
-                    onContinueLeave = {
-                        navController.navigate("${Routes.AttendanceGraph}/${Routes.AttendanceLeave}")
-                    }
-                )
-            }
-
-            composable("${Routes.AttendanceGraph}/${Routes.Liveness}") { backStackEntry ->
-                LivenessRoute(
-                    navController = navController,   // ✅ pass navController
-                    backStackEntry = backStackEntry,   // ✅ tambah ini
-                    onBack = { navController.popBackStack() },
-                    onDone = {
-                        // selesai absensi → balik ke dashboard
-                        navController.popBackStack(Routes.Dashboard, inclusive = false)
-                    }
-                )
-            }
-
-            composable("${Routes.AttendanceGraph}/${Routes.AttendanceError}/{msg}") { backStackEntry ->
-
-                val parentEntry = remember(backStackEntry) {
-                    navController.getBackStackEntry(Routes.AttendanceGraph)
-                }
-
-                val shared: SharedAttendanceViewModel = hiltViewModel(parentEntry)
-
-                val raw = backStackEntry.arguments?.getString("msg") ?: "Terjadi kesalahan"
-                //val msg = URLDecoder.decode(raw, "UTF-8")
-                val msg = Uri.decode(raw)
-                val displayMsg = remember(msg) { localizeBackendMessage(msg) }
-
-                AttendanceErrorRoute(
-                    message = displayMsg,
-                    onRetry = {
-                        // kembali ke map: cukup pop sampai map screen
-                        /*navController.popBackStack(
-                            route = "${Routes.AttendanceGraph}/${Routes.AttendanceMap}/{action}",
-                            inclusive = false
-                        )*/
-
-                        // 1) set trigger refresh
-                        shared.requestRefreshLocation()
-
-                        // 2) balik ke map (pop error screen)
-                        navController.popBackStack()
-                        // sekarang user kembali ke Liveness (karena error screen dipush dari Liveness)
-                        // kita pop sekali lagi biar balik ke Map:
-                        navController.popBackStack()
+                    onRiwayatAbsen = {
+                        navController.navigate(Routes.AttendanceHistory)
                     },
-                    onToDashboard = {
-                        navController.popBackStack(Routes.Dashboard, inclusive = false)
-                    }
-                )
-            }
-
-            composable("${Routes.AttendanceGraph}/${Routes.AttendanceSuccess}") { backStackEntry ->
-                val parentEntry = remember(backStackEntry) {
-                    navController.getBackStackEntry(Routes.AttendanceGraph)
-                }
-                val shared: SharedAttendanceViewModel = hiltViewModel(parentEntry)
-                val s by shared.state.collectAsState()
-
-                AttendanceSuccessRoute(
-                    action = s.action,
-                    result = s.lastResult,
-                    onToDashboard = { navController.popBackStack(Routes.Dashboard, false) },
-                    onBackToDashboard = { navController.popBackStack(Routes.Dashboard, false) }
-                )
-            }
-
-            composable("${Routes.AttendanceGraph}/${Routes.AttendanceLeave}") { backStackEntry ->
-                val parentEntry = remember(backStackEntry) {
-                    navController.getBackStackEntry(Routes.AttendanceGraph)
-                }
-                val shared: SharedAttendanceViewModel = hiltViewModel(parentEntry)
-
-                AttendanceLeaveRoute(
-                    shared = shared,
-                    onCancel = { navController.popBackStack(Routes.Dashboard, false) },
-                    onContinue = { navController.navigate("${Routes.AttendanceGraph}/${Routes.Liveness}") },
-                    onBack = {
-                        navController.popBackStack()
+                    onIjin = {
+                        navController.navigate(Routes.Leave)
                     }
 
                 )
             }
-        }
+
+            composable(Routes.AttendanceHistory) {
+                AttendanceHistoryRoute(onBack = { navController.popBackStack() })
+            }
+
+            composable(Routes.Leave) {
+                LeaveRoute(onBack = { navController.popBackStack() })
+            }
+
+            // ✅ Attendance nested graph (Shared VM scoped di sini)
+
+            // ✅ NEW: Akun tab
+            composable(Routes.Account) {
+                AccountRoute(
+                    onInformasiProfil = { navController.navigate(Routes.Profile) },
+                    onRiwayatPerizinan = {
+                        navController.navigate(Routes.Leave) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onRiwayatKehadiran = {
+                        navController.navigate(Routes.AttendanceHistory) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onRiwayatTunkin = { /* nanti */ },
+                    onJadwalDinas = { /* nanti */ },
+                    onLogout = navController::goToLoginClearBackstack
+                )
+            }
+
+            composable(Routes.Profile) { // ✅ ADD
+                ProfileRoute(
+                    onBack = { navController.popBackStack() }
+                )
+            }
 
 
-        /*composable(Routes.AttendanceMap + "/{action}") {
-            backStack ->
-            val a = backStack.arguments?.getString("action") ?: "in"
-            val action = if (a == "out") AttendanceAction.CheckOut else AttendanceAction.CheckIn
-            AttendanceMapRoute(
-                action = action,
-                onCancel = {
-                    navController.popBackStack()
-                },
-                onContinue = {
-                    // nanti: lanjut ke selfie/liveness screen
-                    // untuk sekarang: bisa toast / navigate placeholder
-                    navController.navigate(Routes.Liveness)
+            navigation(
+                startDestination = "${Routes.AttendanceGraph}/${Routes.AttendanceMap}/{action}",
+                route = Routes.AttendanceGraph
+            ) {
+                composable("${Routes.AttendanceGraph}/${Routes.AttendanceMap}/{action}") { backStackEntry ->
+                    val a = backStackEntry.arguments?.getString("action") ?: "in"
+                    val action =
+                        if (a == "out") AttendanceAction.CheckOut else AttendanceAction.CheckIn
+
+                    AttendanceMapRoute(
+                        navController = navController,   // ✅ pass navController
+                        backStackEntry = backStackEntry,   // ✅ tambah ini
+                        action = action,
+                        onCancel = { navController.popBackStack() },
+                        onContinue = {
+                            navController.navigate("${Routes.AttendanceGraph}/${Routes.Liveness}")
+                        },
+                        onContinueLeave = {
+                            navController.navigate("${Routes.AttendanceGraph}/${Routes.AttendanceLeave}")
+                        }
+                    )
                 }
-            )
-        }
 
-        composable(Routes.Liveness) {
-            LivenessRoute(
-                onBack = { navController.popBackStack() },
-                onSuccess = { photoPath ->
-                    // TODO: next step submit attendance (checkin/checkout) + upload foto
-                    // untuk sekarang bisa navigate ke dashboard atau tampilkan toast
-                    navController.popBackStack() // balik dulu
-                },
-                onDone = {
-                    navController.popBackStack() // balik dulu
+                composable("${Routes.AttendanceGraph}/${Routes.Liveness}") { backStackEntry ->
+                    LivenessRoute(
+                        navController = navController,   // ✅ pass navController
+                        backStackEntry = backStackEntry,   // ✅ tambah ini
+                        onBack = { navController.popBackStack() },
+                        onDone = {
+                            // selesai absensi → balik ke dashboard
+                            navController.popBackStack(Routes.Dashboard, inclusive = false)
+                        }
+                    )
                 }
-            )
-        }*/
+
+                composable("${Routes.AttendanceGraph}/${Routes.AttendanceError}/{msg}") { backStackEntry ->
+
+                    val parentEntry = remember(backStackEntry) {
+                        navController.getBackStackEntry(Routes.AttendanceGraph)
+                    }
+
+                    val shared: SharedAttendanceViewModel = hiltViewModel(parentEntry)
+
+                    val raw = backStackEntry.arguments?.getString("msg") ?: "Terjadi kesalahan"
+                    //val msg = URLDecoder.decode(raw, "UTF-8")
+                    val msg = Uri.decode(raw)
+                    val displayMsg = remember(msg) { localizeBackendMessage(msg) }
+
+                    AttendanceErrorRoute(
+                        message = displayMsg,
+                        onRetry = {
+                            // kembali ke map: cukup pop sampai map screen
+                            /*navController.popBackStack(
+                                route = "${Routes.AttendanceGraph}/${Routes.AttendanceMap}/{action}",
+                                inclusive = false
+                            )*/
+
+                            // 1) set trigger refresh
+                            shared.requestRefreshLocation()
+
+                            // 2) balik ke map (pop error screen)
+                            navController.popBackStack()
+                            // sekarang user kembali ke Liveness (karena error screen dipush dari Liveness)
+                            // kita pop sekali lagi biar balik ke Map:
+                            navController.popBackStack()
+                        },
+                        onToDashboard = {
+                            navController.popBackStack(Routes.Dashboard, inclusive = false)
+                        }
+                    )
+                }
+
+                composable("${Routes.AttendanceGraph}/${Routes.AttendanceSuccess}") { backStackEntry ->
+                    val parentEntry = remember(backStackEntry) {
+                        navController.getBackStackEntry(Routes.AttendanceGraph)
+                    }
+                    val shared: SharedAttendanceViewModel = hiltViewModel(parentEntry)
+                    val s by shared.state.collectAsState()
+
+                    AttendanceSuccessRoute(
+                        action = s.action,
+                        result = s.lastResult,
+                        onToDashboard = { navController.popBackStack(Routes.Dashboard, false) },
+                        onBackToDashboard = { navController.popBackStack(Routes.Dashboard, false) }
+                    )
+                }
+
+                composable("${Routes.AttendanceGraph}/${Routes.AttendanceLeave}") { backStackEntry ->
+                    val parentEntry = remember(backStackEntry) {
+                        navController.getBackStackEntry(Routes.AttendanceGraph)
+                    }
+                    val shared: SharedAttendanceViewModel = hiltViewModel(parentEntry)
+
+                    AttendanceLeaveRoute(
+                        shared = shared,
+                        onCancel = { navController.popBackStack(Routes.Dashboard, false) },
+                        onContinue = { navController.navigate("${Routes.AttendanceGraph}/${Routes.Liveness}") },
+                        onBack = {
+                            navController.popBackStack()
+                        }
+
+                    )
+                }
+            }
+
+
+        }
     }
+
+
 }
 
 @Composable
@@ -315,6 +388,59 @@ private fun SplashScreen() {
     }
 }
 
+
+@Composable
+private fun BottomBar(
+    currentDestination: NavDestination?,
+    onNavigate: (String) -> Unit
+) {
+    val items = listOf(
+        Triple(Routes.Dashboard, "Dashboard", Icons.Filled.Dashboard),
+        Triple(Routes.AttendanceHistory, "Hadir", Icons.Filled.EventAvailable),
+        Triple(Routes.Leave, "Ijin", Icons.Filled.Description),
+        Triple(Routes.Account, "Akun", Icons.Filled.AccountCircle),
+    )
+
+    NavigationBar(
+        containerColor = BottomNavBlue,
+        tonalElevation = 8.dp
+    ) {
+        items.forEach { (route, label, icon) ->
+            //val selected = currentRoute == route
+
+            /* val selected = when (route) {
+                 Routes.Account -> currentRoute == Routes.Account || currentRoute == Routes.Profile // ✅ CHANGE
+                 else -> currentRoute == route
+             }*/
+
+            val selected = currentDestination?.hierarchy?.any { it.route == route } == true
+
+
+            NavigationBarItem(
+                selected = selected,
+                onClick = { onNavigate(route) },
+                icon = {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = label,
+                        tint = if (selected) Color.White else Color.White.copy(alpha = 0.7f)
+                    )
+                },
+                label = {
+                    Text(
+                        text = label,
+                        color = if (selected) Color.White else Color.White.copy(alpha = 0.7f)
+                    )
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    indicatorColor = Color.White.copy(alpha = 0.15f)
+                )
+            )
+        }
+    }
+}
+
+
 private fun NavHostController.goToDashboardClearBackstack() {
     navigate(Routes.Dashboard) {
         popUpTo(Routes.Login) { inclusive = true }
@@ -327,4 +453,23 @@ private fun NavHostController.goToLoginClearBackstack() {
         popUpTo(graph.id) { inclusive = true }
         launchSingleTop
     }
+}
+
+private fun isBottomBarVisible(route: String?): Boolean {
+    if (route.isNullOrBlank()) return false
+
+    // hide di login
+    if (route == Routes.Login) return false
+
+    // hide di flow absensi
+    if (route.startsWith(Routes.AttendanceGraph)) return false
+
+    // ✅ hide di screen full page (tanpa bottom nav)
+    if (route in setOf(
+            Routes.Profile, // Informasi Profil
+            // nanti bisa tambah: Routes.ChangePasswordScreen, dll
+        )
+    ) return false
+
+    return true
 }

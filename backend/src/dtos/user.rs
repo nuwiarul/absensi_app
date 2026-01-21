@@ -1,9 +1,10 @@
 use crate::auth::rbac::UserRole;
 use crate::dtos::satker::SatkerDto;
-use crate::models::{Satker, User};
+use crate::models::{Rank, Satker, User};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
+use crate::dtos::rank::RankDto;
 
 #[derive(Deserialize, Debug, Clone, Validate)]
 pub struct CreateUserReq {
@@ -85,6 +86,7 @@ pub struct UserDto {
     pub id: Uuid,
     pub satker: SatkerDto,
     pub rank_id: Option<Uuid>,
+    pub rank: Option<String>,
     pub nrp: String,
     pub full_name: String,
     pub email: Option<String>,
@@ -95,12 +97,22 @@ pub struct UserDto {
 }
 
 impl UserDto {
-    pub fn to_row_with_satker(row: &User, satkers: &[Satker]) -> Self {
+    pub fn to_row_with_satker(row: &User, satkers: &[Satker], ranks: &[Rank]) -> Self {
         let satker = SatkerDto::get_satker_dto(satkers, row.satker_id);
+
+        let mut rank_name : Option<String> = None;
+
+        if let Some(rank_id) = row.rank_id {
+            let rank = RankDto::get_rank_dto(ranks, rank_id);
+            rank_name = Some(rank.name);
+        }
+
+
         UserDto {
             id: row.id,
             satker: satker.clone(),
             rank_id: row.rank_id,
+            rank:rank_name,
             nrp: row.nrp.clone(),
             full_name: row.full_name.clone(),
             email: row.email.clone(),
@@ -110,18 +122,26 @@ impl UserDto {
             is_active: row.is_active,
         }
     }
-    pub fn to_rows_with_satker(rows: &[User], satkers: &[Satker]) -> Vec<UserDto> {
+    pub fn to_rows_with_satker(rows: &[User], satkers: &[Satker], ranks: &[Rank]) -> Vec<UserDto> {
         rows.iter()
-            .map(|r| UserDto::to_row_with_satker(r, satkers))
+            .map(|r| UserDto::to_row_with_satker(r, satkers, ranks))
             .collect()
     }
 
-    pub fn to_row_dto(row: &User, satker: &Satker) -> Self {
+    pub fn to_row_dto(row: &User, satker: &Satker, ranks: &[Rank]) -> Self {
         let satker_dto = SatkerDto::to_row(satker);
+
+        let mut rank_name : Option<String> = None;
+
+        if let Some(rank_id) = row.rank_id {
+            let rank = RankDto::get_rank_dto(ranks, rank_id);
+            rank_name = Some(rank.name);
+        }
         UserDto {
             id: row.id,
             satker: satker_dto.clone(),
             rank_id: row.rank_id,
+            rank: rank_name,
             nrp: row.nrp.clone(),
             full_name: row.full_name.clone(),
             email: row.email.clone(),

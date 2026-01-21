@@ -77,7 +77,8 @@ fun LeaveScreen(
                     } else {
                         TextButton(onClick = onReload, enabled = !state.loading) { Text("Refresh") }
                     }
-                }
+                },
+                windowInsets = WindowInsets(0, 0, 0, 0) // opsional: bikin lebih rapat ke atas
             )
         }
     ) { padding ->

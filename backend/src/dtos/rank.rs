@@ -1,7 +1,8 @@
-use crate::models::Rank;
+use crate::models::{Rank, Satker};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
+use crate::dtos::satker::SatkerDto;
 
 #[derive(Deserialize, Debug, Clone, Validate)]
 pub struct CreateRankReq {
@@ -39,6 +40,21 @@ impl RankDto {
             description: row.description.clone(),
             tukin_base: row.tukin_base,
         }
+    }
+
+    pub fn get_rank_dto(rows: &[Rank], id: Uuid) -> Self {
+        rows.iter()
+            .find(|r| r.id == id)
+            .map(RankDto::to_row)
+            .unwrap_or_else(|| {
+                RankDto {
+                    id: Uuid::nil(),
+                    code: "".to_string(),
+                    name: "-".to_string(),
+                    description: Some("-".to_string()),
+                    tukin_base: 0,
+                }
+            })
     }
 
     pub fn to_rows(rows: &[Rank]) -> Vec<RankDto> {

@@ -17,6 +17,7 @@ use std::future::pending;
 use std::sync::Arc;
 use uuid::Uuid;
 use validator::Validate;
+use crate::database::rank::RankRepo;
 use crate::database::user::UserRepo;
 use crate::dtos::SuccessResponse;
 
@@ -62,7 +63,13 @@ pub async fn create_leave(
         .map_err(|e| HttpError::server_error(e.to_string()))?;
 
     let satker_dto = SatkerDto::to_row(&user_claims.satker);
-    let user_dto = UserDto::to_row_dto(&user_claims.user, &user_claims.satker);
+
+    let ranks = app_state.db_client
+        .list_ranks()
+        .await
+        .map_err(|e| HttpError::server_error(e.to_string()))?;
+
+    let user_dto = UserDto::to_row_dto(&user_claims.user, &user_claims.satker, &ranks);
 
     let response = CreateLeaveDto {
         id: row.id,
