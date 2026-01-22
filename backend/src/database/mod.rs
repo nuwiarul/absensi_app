@@ -15,3 +15,4 @@ pub mod rank;
 pub mod duty_schedule;
 pub mod tukin;
 pub mod announcement;
+pub mod duty_schedule_request;

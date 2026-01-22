@@ -23,4 +23,8 @@ object Routes {
     const val Account = "account"
 
     const val Profile = "profile"
+
+    const val TukinHistory = "tukin_history"
+
+    const val DutySchedules = "duty_schedules"
 }

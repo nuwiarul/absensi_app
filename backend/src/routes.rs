@@ -22,6 +22,7 @@ use std::sync::Arc;
 use tower_http::trace::TraceLayer;
 use crate::handler::announcement::announcement_handler;
 use crate::handler::dashboard::dashboard_handler;
+use crate::handler::duty_schedule_request::duty_schedule_request_handler;
 use crate::handler::tukin::tukin_handler;
 
 async fn health() -> &'static str {
@@ -102,6 +103,10 @@ pub fn create_router(app_state: Arc<AppState>) -> Router {
         .nest(
             "/dashboard",
             dashboard_handler().layer(middleware::from_fn(auth_middleware)),
+        )
+        .nest(
+            "/duty-schedule-requests",
+            duty_schedule_request_handler().layer(middleware::from_fn(auth_middleware)),
         )
         .route("/health", get(health))
         .layer(TraceLayer::new_for_http())

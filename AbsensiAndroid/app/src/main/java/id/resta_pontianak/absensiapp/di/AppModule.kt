@@ -9,6 +9,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import id.resta_pontianak.absensiapp.data.local.DeviceIdProvider
+import id.resta_pontianak.absensiapp.data.local.SettingsStore
 import id.resta_pontianak.absensiapp.data.local.TokenStore
 import id.resta_pontianak.absensiapp.data.network.ApiService
 import id.resta_pontianak.absensiapp.data.network.AuthInterceptor
@@ -20,7 +21,10 @@ import id.resta_pontianak.absensiapp.data.network.SelfieUrlProvider
 import id.resta_pontianak.absensiapp.data.network.SelfieUrlProviderImpl
 import id.resta_pontianak.absensiapp.data.repo.AttendanceRepository
 import id.resta_pontianak.absensiapp.data.repo.AuthRepository
+import id.resta_pontianak.absensiapp.data.repo.DutyScheduleRepository
 import id.resta_pontianak.absensiapp.data.repo.LeaveRepository
+import id.resta_pontianak.absensiapp.data.repo.SettingsRepository
+import id.resta_pontianak.absensiapp.data.repo.TukinRepository
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -136,5 +140,23 @@ object AppModule {
     @Singleton
     fun provideLeaveRepository(api: ApiService): LeaveRepository = LeaveRepository(api)
 
+    @Provides
+    @Singleton
+    fun provideSettingsStore(@ApplicationContext ctx: Context): SettingsStore = SettingsStore(ctx)
+
+    @Provides
+    @Singleton
+    fun provideSettingsRepository(api: ApiService, store: SettingsStore): SettingsRepository =
+        SettingsRepository(api, store)
+
+    @Provides
+    @Singleton
+    fun provideTukinRepository(api: ApiService, tokenStore: TokenStore): TukinRepository =
+        TukinRepository(api, tokenStore)
+
+    @Provides
+    @Singleton
+    fun provideDutyScheduleRepository(api: ApiService, tokenStore: TokenStore): DutyScheduleRepository =
+        DutyScheduleRepository(api, tokenStore)
 
 }

@@ -1,12 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { getTimezone, updateTimezone } from "./api"
-import type { UpdateTimezoneReq } from "./types"
+import type {TimezoneResp, UpdateTimezoneReq} from "./types"
+
+/*export function useTimezoneQuery() {
+  return useQuery({
+    queryKey: ["settings", "timezone"],
+    queryFn: getTimezone,
+    staleTime: 60_000,
+  })
+}*/
 
 export function useTimezoneQuery() {
   return useQuery({
     queryKey: ["settings", "timezone"],
     queryFn: getTimezone,
     staleTime: 60_000,
+    // Extract the nested data automatically
+    select: (response: TimezoneResp) => response.data
   })
 }
 

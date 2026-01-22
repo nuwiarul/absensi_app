@@ -1,5 +1,6 @@
 package id.resta_pontianak.absensiapp.data.network
 
+import com.google.gson.JsonElement
 import okhttp3.MultipartBody
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -92,4 +93,47 @@ interface ApiService {
 
     @PUT("users/me/profile")
     suspend fun updateMyProfile(@Body body: UpdateMyProfileReq): ApiResponse<String>
+
+    @GET("settings/timezone")
+    suspend fun getTimezone(): ApiResponse<TimezoneData>
+
+    @GET("tukin/calculations")
+    suspend fun tukinCalculations(
+        @Query("month") month: String,
+        @Query("satker_id") satkerId: String,
+        @Query("user_id") userId: String
+    ): ApiResponse<List<TukinCalculationDto>>
+
+    @POST("tukin/generate")
+    suspend fun generateTukin(
+        @Query("month") month: String,
+        @Query("satker_id") satkerId: String,
+        @Query("user_id") userId: String,
+        @Query("force") force: Boolean = true
+    ): ApiResponse<JsonElement>
+
+    @GET("duty-schedules")
+    suspend fun listDutySchedules(
+        @Query("from") from: String,
+        @Query("to") to: String,
+        @Query("satker_id") satkerId: String,
+        @Query("user_id") userId: String
+    ): ApiResponse<List<DutyScheduleDto>>
+
+    @GET("duty-schedule-requests")
+    suspend fun listDutyScheduleRequests(
+        @Query("status") status: String,
+        @Query("from") from: String,
+        @Query("to") to: String
+    ): ApiResponse<List<DutyScheduleRequestDto>>
+
+    @POST("duty-schedule-requests")
+    suspend fun createDutyScheduleRequest(
+        @Body body: CreateDutyScheduleReq
+    ): ApiResponse<String>
+
+    @PUT("duty-schedule-requests/{id}/cancel")
+    suspend fun cancelDutyScheduleRequest(
+        @Path("id") id: String
+    ): ApiResponse<String>
 }

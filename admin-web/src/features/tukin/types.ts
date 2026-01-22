@@ -66,6 +66,37 @@ export type SaveLeaveRulesReq = {
   rules: LeaveRule[]
 }
 
+export type DayRow = {
+  work_date?: string
+  expected_unit?: number
+  earned_credit?: number
+  check_in_at?: string | null
+  check_out_at?: string | null
+  late_minutes?: number | null
+  note?: string | null
+  // Duty & Leave
+  is_duty_schedule: boolean
+  duty_schedule_id?: string | null
+  leave_type?: string | null
+  leave_credit?: number | null
+
+  // OPTIONAL (kalau backend sudah mulai kirim)
+  penalty_pct?: number | null
+  penalty_reason?: string | null
+}
+
+export type TukinBreakdown = {
+  month: string
+  days: DayRow[]
+  // Summary stats found in your JSON
+  absent_days: number
+  present_days: number
+  duty_absent: number
+  duty_present: number
+  missing_checkout_days: number
+  total_late_minutes: number
+}
+
 export type TukinCalculationRow = {
   month: string // YYYY-MM
   satker_id: string
@@ -86,7 +117,8 @@ export type TukinCalculationRow = {
   final_tukin: number
 
   // JSON dari backend (berisi days breakdown, dll)
-  breakdown?: any
+  //breakdown?: any
+  breakdown?: TukinBreakdown
   updated_at?: string
 }
 

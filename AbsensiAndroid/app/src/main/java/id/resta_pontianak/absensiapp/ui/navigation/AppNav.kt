@@ -55,9 +55,14 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.navArgument
 import id.resta_pontianak.absensiapp.ui.screens.account.AccountRoute
+import id.resta_pontianak.absensiapp.ui.screens.duty.DutyScheduleRoute
 import id.resta_pontianak.absensiapp.ui.screens.profile.ProfileRoute
+import id.resta_pontianak.absensiapp.ui.screens.tukin.TukinHistoryRoute
+import java.time.YearMonth
 
 private val BottomNavBlue = Color(0xFF0B2A5A)
 
@@ -223,6 +228,22 @@ fun AppNav(
                 LeaveRoute(onBack = { navController.popBackStack() })
             }
 
+            composable(
+                route = "${Routes.TukinHistory}?month={month}",
+                arguments = listOf(
+                    navArgument("month") {
+                        type = NavType.StringType
+                        defaultValue = YearMonth.now().toString()
+                    }
+                )
+            ) { backStackEntry ->
+                val month = backStackEntry.arguments?.getString("month") ?: YearMonth.now().toString()
+                TukinHistoryRoute(
+                    onBack = { navController.popBackStack() },
+                    initialMonth = month
+                )
+            }
+
             // ✅ Attendance nested graph (Shared VM scoped di sini)
 
             // ✅ NEW: Akun tab
@@ -247,14 +268,23 @@ fun AppNav(
                             restoreState = true
                         }
                     },
-                    onRiwayatTunkin = { /* nanti */ },
-                    onJadwalDinas = { /* nanti */ },
+                    onRiwayatTunkin = {
+                        val m = YearMonth.now().toString()
+                        navController.navigate("${Routes.TukinHistory}?month=$m")
+                    },
+                    onJadwalDinas = { navController.navigate(Routes.DutySchedules) },
                     onLogout = navController::goToLoginClearBackstack
                 )
             }
 
             composable(Routes.Profile) { // ✅ ADD
                 ProfileRoute(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(Routes.DutySchedules) {
+                DutyScheduleRoute(
                     onBack = { navController.popBackStack() }
                 )
             }
@@ -464,10 +494,13 @@ private fun isBottomBarVisible(route: String?): Boolean {
     // hide di flow absensi
     if (route.startsWith(Routes.AttendanceGraph)) return false
 
+    if (route.startsWith(Routes.TukinHistory)) return false
+
     // ✅ hide di screen full page (tanpa bottom nav)
     if (route in setOf(
             Routes.Profile, // Informasi Profil
-            // nanti bisa tambah: Routes.ChangePasswordScreen, dll
+            Routes.DutySchedules, // Jadwal Dinas
+            // nanti bisa tambah: Routes.ChangePasswordScreen, dll,
         )
     ) return false
 

@@ -21,7 +21,7 @@ import {
 import { apiErrorMessage } from "@/lib/api-error"
 import { useTimezoneQuery } from "@/features/settings/hooks"
 import { useTukinCalculations } from "@/features/tukin/hooks"
-import type { TukinCalculationRow } from "@/features/tukin/types"
+import type {DayRow, TukinCalculationRow} from "@/features/tukin/types"
 
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
@@ -97,19 +97,7 @@ function formatBulanID(isoMonth: string, tz: string) {
     return formatted.charAt(0).toUpperCase() + formatted.slice(1)
 }
 
-type DayRow = {
-    work_date?: string
-    expected_unit?: number
-    earned_credit?: number
-    check_in_at?: string | null
-    check_out_at?: string | null
-    late_minutes?: number | null
-    note?: string | null
 
-    // OPTIONAL (kalau backend sudah mulai kirim)
-    penalty_pct?: number | null
-    penalty_reason?: string | null
-}
 
 function noteStr(d: DayRow): string {
     return String(d.note ?? "").trim().toUpperCase()
@@ -133,6 +121,26 @@ function isOutOfGeofence(d: DayRow): boolean {
 function isDuty(d: DayRow): boolean {
     const n = noteStr(d)
     return n.includes("DUTY") || n.includes("DINAS")
+}
+
+function isSakit(d: DayRow): boolean {
+    const n = noteStr(d)
+    return n.includes("SAKIT")
+}
+
+function isCuti(d: DayRow): boolean {
+    const n = noteStr(d)
+    return n.includes("CUTI")
+}
+
+function isIjin(d: DayRow): boolean {
+    const n = noteStr(d)
+    return n.includes("IJIN")
+}
+
+function isDinas(d: DayRow): boolean {
+    const n = noteStr(d)
+    return n.includes("DINASLUAR") || n.includes("DINAS_LUAR")
 }
 
 function isHolidayIgnored(d: DayRow): boolean {
@@ -162,6 +170,10 @@ function DayNoteBadge({ d }: { d: DayRow }) {
     const n = noteStr(d)
     if (!n) return null
     if (n.includes("HOLIDAY_IGNORED")) return <Badge variant="outline">HOLIDAY</Badge>
+    if (n.includes("SAKIT")) return <Badge variant="secondary">SAKIT</Badge>
+    if (n.includes("CUTI")) return <Badge variant="secondary">CUTI</Badge>
+    if (n.includes("IJIN")) return <Badge variant="secondary">IJIN</Badge>
+    if (n.includes("DINASLUAR") || n.includes("DINAS_LUAR")) return <Badge variant="secondary">DINAS LUAR</Badge>
     if (n.includes("DUTY")) return <Badge variant="secondary">DUTY</Badge>
     if (n.includes("OUT_OF_GEOFENCE")) return <Badge variant="destructive">OUT</Badge>
     if (n.includes("MISSING_CHECKOUT")) return <Badge variant="destructive">MISSING</Badge>
@@ -174,6 +186,10 @@ function buildReasons(d: DayRow): string[] {
     if (isMissingCheckout(d)) reasons.push("MISSING_CHECKOUT")
     if (isOutOfGeofence(d)) reasons.push("OUT_OF_GEOFENCE")
     if (lateMinutes(d) > 0) reasons.push(`LATE_${lateMinutes(d)}m`)
+    if (isSakit(d)) reasons.push("SAKIT")
+    if (isCuti(d)) reasons.push("CUTI")
+    if (isIjin(d)) reasons.push("IJIN")
+    if (isDinas(d)) reasons.push("DINAS_LUAR")
     if (isDuty(d)) reasons.push("DUTY")
     if (isHalfday(d)) reasons.push("HALFDAY")
     if (isHolidayIgnored(d)) reasons.push("HOLIDAY_IGNORED")
@@ -235,12 +251,14 @@ export default function TukinCalculationDetailPage() {
         enabled: canQuery,
     })
 
+
+
     React.useEffect(() => {
         if (!canQuery) toast.error("Parameter tidak lengkap (month/satkerId/userId)")
     }, [canQuery])
 
     const row: TukinCalculationRow | null = q.data && q.data.length > 0 ? q.data[0] : null
-    const days: DayRow[] = ((row?.breakdown?.days as any[]) ?? []) as DayRow[]
+    const days: DayRow[] = ((row?.breakdown?.days) ?? []) as DayRow[]
 
     // =========================
     // INSIGHT CEPAT (COUNTER)
@@ -388,10 +406,10 @@ export default function TukinCalculationDetailPage() {
             33
         )
 
-        const filterInfo = `Filter → onlyProblem=${onlyProblem ? "YA" : "TIDAK"}; showHoliday=${showHolidayIgnored ? "YA" : "TIDAK"}; search=${qText.trim() ? qText.trim() : "-"}; rows=${filteredDays.length}`
+        //const filterInfo = `Filter → onlyProblem=${onlyProblem ? "YA" : "TIDAK"}; showHoliday=${showHolidayIgnored ? "YA" : "TIDAK"}; search=${qText.trim() ? qText.trim() : "-"}; rows=${filteredDays.length}`
         //doc.text(filterInfo, 14, 38)
 
-        const safeText = (s: unknown) =>
+       /* const safeText = (s: unknown) =>
             String(s ?? "")
                 // buang karakter kontrol & non printable
                 .replace(/[\u0000-\u001F\u007F-\u009F]/g, "")
@@ -399,10 +417,10 @@ export default function TukinCalculationDetailPage() {
                 .replace(/[^\x20-\x7EÀ-ž]/g, " ")
                 // rapikan spasi
                 .replace(/\s+/g, " ")
-                .trim()
+                .trim()*/
 
-// ganti simbol panah agar aman
-        const safeFilterInfo = safeText(filterInfo.replace("→", "->"))
+
+        //const safeFilterInfo = safeText(filterInfo.replace("→", "->"))
         //doc.text(safeFilterInfo, 14, 38)
 
         const body = filteredDays.map((d, idx) => {
@@ -548,7 +566,7 @@ export default function TukinCalculationDetailPage() {
                     <div className="text-sm text-muted-foreground">Memuat...</div>
                 ) : q.isError ? (
                     <div className="text-sm text-destructive">
-                        {apiErrorMessage((q as any).error)}
+                        {apiErrorMessage(q.error)}
                     </div>
                 ) : !row ? (
                     <div className="text-sm text-muted-foreground">Data tidak ditemukan.</div>
