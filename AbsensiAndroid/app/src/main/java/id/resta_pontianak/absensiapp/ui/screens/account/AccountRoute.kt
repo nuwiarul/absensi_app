@@ -13,6 +13,7 @@ import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import android.content.Context                // ✅ ADD
 import android.net.Uri                        // ✅ ADD
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult // ✅ ADD
 import androidx.activity.result.contract.ActivityResultContracts   // ✅ ADD
 import androidx.compose.foundation.clickable   // ✅ ADD
@@ -32,17 +33,22 @@ import androidx.compose.material3.SnackbarHost // ✅ ADD
 import androidx.compose.material3.SnackbarHostState // ✅ ADD
 import androidx.compose.material3.rememberModalBottomSheetState // ✅ ADD
 import androidx.compose.runtime.LaunchedEffect // ✅ ADD
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext // ✅ ADD
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider      // ✅ ADD
+import id.resta_pontianak.absensiapp.data.local.TokenStore
+import id.resta_pontianak.absensiapp.ui.badges.LeaveBadgeViewModel
+import kotlinx.coroutines.launch
 import java.io.File                            // ✅ ADD
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountRoute(
+    tokenStore: TokenStore,
     onInformasiProfil: () -> Unit,
     onRiwayatPerizinan: () -> Unit,
     onRiwayatKehadiran: () -> Unit,
@@ -51,8 +57,16 @@ fun AccountRoute(
     onLogout: () -> Unit,
     vm: AccountViewModel = hiltViewModel()
 ) {
+
+    val scope = rememberCoroutineScope()
     val s by vm.state.collectAsState()
+    val badgeVm: LeaveBadgeViewModel = hiltViewModel()
+    val badge by badgeVm.state.collectAsState()
     val ctx = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        vm.refreshBadges()
+    }
 
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showPickSheet by remember { mutableStateOf(false) }
@@ -120,6 +134,7 @@ fun AccountRoute(
 
             onClickChangePhoto = { showPickSheet = true },
             isUploading = s.isUploading,
+            leaveSubmittedBadgeCount = badge.submittedCount,
 
             onInformasiProfil = {
                 vm.onAction(AccountViewModel.Action.InformasiProfil)
@@ -137,6 +152,7 @@ fun AccountRoute(
                 vm.onAction(AccountViewModel.Action.RiwayatTunkin)
                 onRiwayatTunkin()
             },
+            pendingDutySubmittedCount = s.pendingDutySubmittedCount,
             onJadwalDinas = {
                 vm.onAction(AccountViewModel.Action.JadwalDinas)
                 onJadwalDinas()
@@ -196,7 +212,11 @@ fun AccountRoute(
                     TextButton(
                         onClick = {
                             showLogoutDialog = false
-                            onLogout()
+                            scope.launch {
+                                tokenStore.clear()
+                                onLogout()
+                            }
+
                         }
                     ) {
                         Text("Ya, Logout", color = MaterialTheme.colorScheme.error)

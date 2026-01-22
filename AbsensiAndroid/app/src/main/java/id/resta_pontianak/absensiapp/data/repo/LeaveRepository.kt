@@ -9,7 +9,10 @@ class LeaveRepository @Inject constructor(
     suspend fun createLeave(req: LeaveCreateReq): LeaveCreateResp {
         // endpoint create bukan ApiResponse
         return try {
-            api.createLeave(req)
+            val res = api.createLeave(req)
+            // ✅ notify badge + screen lain
+            LeaveEvents.emitChanged()
+            res
         } catch (e: Exception) {
             throw IllegalStateException(ApiErrorParser.parse(e))
         }
@@ -27,9 +30,9 @@ class LeaveRepository @Inject constructor(
         }
     }
 
-    suspend fun all(from: String, to: String): List<LeaveListDto> {
+    suspend fun all(from: String, to: String, status: String? = null): List<LeaveListDto> {
         return try {
-            val res = api.leaveAll(from, to)
+            val res = api.leaveAll(from, to, status)
             if (res.status != "200") {
                 throw IllegalStateException("Gagal memuat data (${res.status})")
             }
@@ -39,13 +42,25 @@ class LeaveRepository @Inject constructor(
         }
     }
 
-    suspend fun mine(from: String, to: String): List<LeaveListDto> {
+    suspend fun mine(from: String, to: String, status: String? = null): List<LeaveListDto> {
         return try {
-            val res = api.leaveMine(from, to)
+            val res = api.leaveMine(from, to, status)
             if (res.status != "200") {
                 throw IllegalStateException("Gagal memuat data (${res.status})")
             }
             res.data ?: emptyList()
+        } catch (e: Exception) {
+            throw IllegalStateException(ApiErrorParser.parse(e))
+        }
+    }
+
+    suspend fun cancel(id: String) {
+        try {
+            val res = api.cancelLeave(id)
+            if (res.status != "200") {
+                throw IllegalStateException("Batal ijin gagal (${res.status})")
+            }
+            LeaveEvents.emitChanged()
         } catch (e: Exception) {
             throw IllegalStateException(ApiErrorParser.parse(e))
         }
@@ -57,6 +72,7 @@ class LeaveRepository @Inject constructor(
             if (res.status != "200") {
                 throw IllegalStateException("Approve gagal (${res.status})")
             }
+            LeaveEvents.emitChanged()
         } catch (e: Exception) {
             throw IllegalStateException(ApiErrorParser.parse(e))
         }
@@ -68,6 +84,7 @@ class LeaveRepository @Inject constructor(
             if (res.status != "200") {
                 throw IllegalStateException("Reject gagal (${res.status})")
             }
+            LeaveEvents.emitChanged()
         } catch (e: Exception) {
             throw IllegalStateException(ApiErrorParser.parse(e))
         }

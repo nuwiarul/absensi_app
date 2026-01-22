@@ -44,6 +44,14 @@ pub trait LeaveRequestRepo {
         decision_note: Option<String>,
     ) -> Result<(), Error>;
 
+    /// MEMBER: cancel own leave request (only when SUBMITTED)
+    async fn cancel_leave_request_by_user(
+        &self,
+        leave_id: Uuid,
+        user_id: Uuid,
+        note: Option<String>,
+    ) -> Result<u64, Error>;
+
     async fn list_leave_request_all_from_to(
         &self,
         from: NaiveDate,
@@ -103,6 +111,38 @@ impl LeaveRequestRepo for DBClient {
         ).fetch_one(&self.pool).await?;
 
         Ok(row)
+    }
+
+    async fn cancel_leave_request_by_user(
+        &self,
+        leave_id: Uuid,
+        user_id: Uuid,
+        note: Option<String>,
+    ) -> Result<u64, Error> {
+        let note = note.filter(|s| !s.trim().is_empty());
+        let note = note.or_else(|| Some("Dibatalkan oleh pemohon".to_string()));
+
+        let result = sqlx::query!(
+            r#"
+            UPDATE leave_requests
+            SET
+                status = 'CANCELLED',
+                decided_at = NOW(),
+                approver_id = NULL,
+                decision_note = $3,
+                updated_at = NOW()
+            WHERE id = $1
+              AND user_id = $2
+              AND status = 'SUBMITTED'
+            "#,
+            leave_id,
+            user_id,
+            note
+        )
+            .execute(&self.pool)
+            .await?;
+
+        Ok(result.rows_affected())
     }
 
     async fn list_leave_request_by_user_from_to(

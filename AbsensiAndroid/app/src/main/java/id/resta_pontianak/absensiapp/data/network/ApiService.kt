@@ -70,15 +70,23 @@ interface ApiService {
     @GET("leave-requests")
     suspend fun leaveAll(
         @Query("from") from: String,
-        @Query("to") to: String
+        @Query("to") to: String,
+        @Query("status") status: String? = null
     ): ApiResponse<List<LeaveListDto>>
 
     // MEMBER: mine by range
     @GET("leave-requests/mine")
     suspend fun leaveMine(
         @Query("from") from: String,
-        @Query("to") to: String
+        @Query("to") to: String,
+        @Query("status") status: String? = null
     ): ApiResponse<List<LeaveListDto>>
+
+    // MEMBER: cancel (only when SUBMITTED)
+    @POST("leave-requests/{id}/cancel")
+    suspend fun cancelLeave(
+        @Path("id") id: String
+    ): ApiResponse<String>
 
     // APPROVE / REJECT
     @POST("leave-requests/{id}/approve")
@@ -139,9 +147,9 @@ interface ApiService {
 
     @GET("duty-schedule-requests")
     suspend fun listDutyScheduleRequests(
-        @Query("status") status: String,
-        @Query("from") from: String,
-        @Query("to") to: String
+        @Query("status") status: String = "SUBMITTED",
+        @Query("from") from: String? = null,
+        @Query("to") to: String? = null
     ): ApiResponse<List<DutyScheduleRequestDto>>
 
     @POST("duty-schedule-requests")

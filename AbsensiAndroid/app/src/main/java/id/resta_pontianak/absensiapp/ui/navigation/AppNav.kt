@@ -42,6 +42,8 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.EventAvailable
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -63,6 +65,7 @@ import id.resta_pontianak.absensiapp.ui.screens.duty.DutyScheduleRoute
 import id.resta_pontianak.absensiapp.ui.screens.profile.ProfileRoute
 import id.resta_pontianak.absensiapp.ui.screens.tukin.TukinHistoryRoute
 import java.time.YearMonth
+import id.resta_pontianak.absensiapp.ui.badges.LeaveBadgeViewModel
 
 private val BottomNavBlue = Color(0xFF0B2A5A)
 
@@ -154,13 +157,15 @@ fun AppNav(
             currentRoute != Routes.Profile*/
 
     val showBottomBar = isBottomBarVisible(currentRoute)
-
+    val badgeVm: LeaveBadgeViewModel = hiltViewModel()
+    val badgeState by badgeVm.state.collectAsState()
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
                 BottomBar(
                     //currentRoute = currentRoute,
                     currentDestination = currentDestination,
+                    submittedBadgeCount = badgeState.submittedCount,
                     onNavigate = { route ->
                         navController.navigate(route) {
                             popUpTo(navController.graph.findStartDestination().id) {
@@ -249,6 +254,7 @@ fun AppNav(
             // ✅ NEW: Akun tab
             composable(Routes.Account) {
                 AccountRoute(
+                    tokenStore = tokenStore,
                     onInformasiProfil = { navController.navigate(Routes.Profile) },
                     onRiwayatPerizinan = {
                         navController.navigate(Routes.Leave) {
@@ -422,8 +428,11 @@ private fun SplashScreen() {
 @Composable
 private fun BottomBar(
     currentDestination: NavDestination?,
+    submittedBadgeCount: Int,
     onNavigate: (String) -> Unit
 ) {
+
+
     val items = listOf(
         Triple(Routes.Dashboard, "Dashboard", Icons.Filled.Dashboard),
         Triple(Routes.AttendanceHistory, "Hadir", Icons.Filled.EventAvailable),
@@ -444,17 +453,38 @@ private fun BottomBar(
              }*/
 
             val selected = currentDestination?.hierarchy?.any { it.route == route } == true
-
+            val tint = if (selected) Color.White else Color.White.copy(alpha = 0.7f)
 
             NavigationBarItem(
                 selected = selected,
                 onClick = { onNavigate(route) },
                 icon = {
-                    Icon(
+                    /*Icon(
                         imageVector = icon,
                         contentDescription = label,
                         tint = if (selected) Color.White else Color.White.copy(alpha = 0.7f)
-                    )
+                    )*/
+
+
+                    // Badge hanya untuk tab Ijin: jumlah leave SUBMITTED (±7 hari)
+                    if (route == Routes.Leave && submittedBadgeCount > 0) {
+                        BadgedBox(
+                            badge = {
+                                Badge(
+                                    containerColor = Color(0xFFE53935)
+                                ) {
+                                    Text(
+                                        text = submittedBadgeCount.coerceAtMost(99).toString(),
+                                        color = Color.White
+                                    )
+                                }
+                            }
+                        ) {
+                            Icon(imageVector = icon, contentDescription = label, tint = tint)
+                        }
+                    } else {
+                        Icon(imageVector = icon, contentDescription = label, tint = tint)
+                    }
                 },
                 label = {
                     Text(
@@ -474,14 +504,14 @@ private fun BottomBar(
 private fun NavHostController.goToDashboardClearBackstack() {
     navigate(Routes.Dashboard) {
         popUpTo(Routes.Login) { inclusive = true }
-        launchSingleTop
+        launchSingleTop = true
     }
 }
 
 private fun NavHostController.goToLoginClearBackstack() {
     navigate(Routes.Login) {
         popUpTo(graph.id) { inclusive = true }
-        launchSingleTop
+        launchSingleTop = true
     }
 }
 

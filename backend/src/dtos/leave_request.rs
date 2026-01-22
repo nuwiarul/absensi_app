@@ -75,6 +75,8 @@ pub fn validate_list_my_leaves_dates(req: &ListMyLeaveQuery) -> Result<(), Valid
 pub struct ListMyLeaveQuery {
     pub from: NaiveDate,
     pub to: NaiveDate,
+    /// Optional filter: SUBMITTED / APPROVED / REJECTED / CANCELLED
+    pub status: Option<String>,
 }
 
 pub fn validate_list_leave_admin_query(req: &ListLeaveAdminQuery) -> Result<(), ValidationError> {

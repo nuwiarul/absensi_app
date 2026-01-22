@@ -24,7 +24,7 @@ class DutyScheduleRepository @Inject constructor(
         ).data ?: emptyList()
     }
 
-    suspend fun listDutyScheduleRequests(status: String, from: String, to: String): List<DutyScheduleRequestDto> {
+    suspend fun listDutyScheduleRequests(status: String, from: String?, to: String?): List<DutyScheduleRequestDto> {
         return api.listDutyScheduleRequests(
             status = status,
             from = from,

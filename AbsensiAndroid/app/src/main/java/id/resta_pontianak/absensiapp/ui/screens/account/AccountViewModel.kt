@@ -3,6 +3,7 @@ package id.resta_pontianak.absensiapp.ui.screens.account
 import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import coil.ImageLoader
@@ -13,6 +14,8 @@ import id.resta_pontianak.absensiapp.data.network.ApiErrorParser
 import id.resta_pontianak.absensiapp.data.network.ApiService
 import id.resta_pontianak.absensiapp.data.network.ProfileUrlProvider
 import id.resta_pontianak.absensiapp.data.network.SelfieUrlProvider
+import id.resta_pontianak.absensiapp.data.repo.DutyScheduleRepository
+import id.resta_pontianak.absensiapp.data.repo.SettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,6 +25,7 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
 import java.io.FileOutputStream
+import java.time.LocalDate
 import javax.inject.Inject
 
 @HiltViewModel
@@ -32,6 +36,8 @@ class AccountViewModel @Inject constructor(
     private val profileUrlProvider: ProfileUrlProvider,
     val imageLoader: ImageLoader,
     private val api: ApiService,
+    private val dutyRepo: DutyScheduleRepository,
+    private val settingsRepository: SettingsRepository,
     @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
@@ -43,6 +49,7 @@ class AccountViewModel @Inject constructor(
         val hadirHari: Int = 0,
         val tidakHadirHari: Int = 0,
         val tunkinNominal: String = "0",
+        val pendingDutySubmittedCount: Int = 0,
 
         val isUploading: Boolean = false,
         val errorMessage: String? = null,
@@ -87,6 +94,29 @@ class AccountViewModel @Inject constructor(
             nrp = p.nrp,
             profilePhotoKey = p.profilePhotoKey
         )
+    }
+
+    fun refreshBadges() {
+        viewModelScope.launch { refreshPendingDutySubmittedCount() }
+    }
+
+    private suspend fun refreshPendingDutySubmittedCount() {
+        try {
+            //val from = LocalDate.now().minusYears(1).toString()
+            //val to = LocalDate.now().plusYears(1).toString()
+            val tz = settingsRepository.getTimezoneCached()
+            val (from, to) = DateRangeUtil.currentToNextMonthRange(tz)
+            val list = dutyRepo.listDutyScheduleRequests(
+                status = "SUBMITTED",
+                from = from,
+                to = to
+            )
+            Log.d("DUTY", list.size.toString())
+            _state.value = _state.value.copy(pendingDutySubmittedCount = list.size)
+        } catch (_: Throwable) {
+            // Kalau user tidak punya akses endpoint (mis. MEMBER), anggap 0.
+            _state.value = _state.value.copy(pendingDutySubmittedCount = 0)
+        }
     }
 
     fun consumeError() {

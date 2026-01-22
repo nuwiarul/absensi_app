@@ -46,6 +46,10 @@ fun LeaveScreen(
     onSetReason: (String) -> Unit,
     onSubmitCreate: () -> Unit,
 
+    // MEMBER
+    onSetStatusFilter: (String) -> Unit,
+    onCancel: (String) -> Unit,
+    onSetHeadAllStatusFilter: (String) -> Unit,
     // head
     onApprove: (String, String) -> Unit,
     onReject: (String, String) -> Unit
@@ -83,9 +87,11 @@ fun LeaveScreen(
         }
     ) { padding ->
 
-        Column(Modifier
-            .padding(padding)
-            .fillMaxSize()) {
+        Column(
+            Modifier
+                .padding(padding)
+                .fillMaxSize()
+        ) {
             // Range filter (untuk list “Semua” / “Mine”)
             RangeBar(
                 ctx = ctx,
@@ -195,19 +201,33 @@ fun LeaveScreen(
                         onReject = onReject
                     )
 
-                    1 -> LeaveList(
-                        loading = state.loading,
-                        items = state.all,
-                        isHead = true
-                    )
+                    1 -> {
+                        StatusFilterBarHeadAll(
+                            selected = state.headAllStatusFilter,
+                            enabled = !state.loading,
+                            onSelect = onSetHeadAllStatusFilter
+                        )
+                        LeaveList(
+                            loading = state.loading,
+                            items = state.all,
+                            isHead = true
+                        )
+                    }
                 }
 
             } else {
                 // MEMBER: hanya list mine
+                StatusFilterBar(
+                    selected = state.statusFilter,
+                    enabled = !state.loading,
+                    onSelect = onSetStatusFilter
+                )
                 LeaveList(
                     loading = state.loading,
                     items = state.mine,
-                    isHead = false
+                    isHead = false,
+                    role = state.role,
+                    onCancel = onCancel
                 )
             }
         }
@@ -363,7 +383,9 @@ private fun PendingCard(
 private fun LeaveList(
     loading: Boolean,
     items: List<LeaveListDto>,
-    isHead: Boolean
+    isHead: Boolean,
+    role: String = "MEMBER",
+    onCancel: (String) -> Unit = {}
 ) {
     if (loading && items.isEmpty()) {
         Box(
@@ -383,14 +405,40 @@ private fun LeaveList(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         items(items, key = { it.id }) { itx ->
-            LeaveCard(item = itx, showUser = isHead)
+            LeaveCard(
+                item = itx, showUser = isHead, role = role,
+                onCancel = onCancel
+            )
         }
     }
 }
 
 @Composable
-private fun LeaveCard(item: LeaveListDto, showUser: Boolean) {
+private fun LeaveCard(
+    item: LeaveListDto,
+    showUser: Boolean,
+    role: String,
+    onCancel: (String) -> Unit
+) {
     val status = item.status
+    var confirmCancel by remember { mutableStateOf(false) }
+
+    if (confirmCancel) {
+        AlertDialog(
+            onDismissRequest = { confirmCancel = false },
+            title = { Text("Batalkan ijin?") },
+            text = { Text("Ijin yang dibatalkan akan berstatus CANCELLED dan tidak bisa diproses lagi.") },
+            confirmButton = {
+                Button(onClick = {
+                    confirmCancel = false
+                    onCancel(item.id)
+                }) { Text("Ya, batalkan") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmCancel = false }) { Text("Tidak") }
+            }
+        )
+    }
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -401,6 +449,18 @@ private fun LeaveCard(item: LeaveListDto, showUser: Boolean) {
 
             Text("Tanggal: ${item.startDate} s/d ${item.endDate}")
             Text("Alasan: ${item.reason}")
+
+            // MEMBER can cancel only when SUBMITTED
+            val canCancel =
+                (!showUser) && role == "MEMBER" && status.equals("SUBMITTED", ignoreCase = true)
+            if (canCancel) {
+                Spacer(Modifier.height(10.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    OutlinedButton(onClick = { confirmCancel = true }) {
+                        Text("Batal")
+                    }
+                }
+            }
 
             if (showUser) {
                 Spacer(Modifier.height(6.dp))
@@ -422,6 +482,82 @@ private fun LeaveCard(item: LeaveListDto, showUser: Boolean) {
         }
     }
 }
+
+@Composable
+private fun StatusFilterBar(
+    selected: String,
+    enabled: Boolean,
+    onSelect: (String) -> Unit
+) {
+    val options = listOf("SUBMITTED", "APPROVED", "REJECTED", "CANCELLED")
+
+    // horizontal row, wrap if needed
+    @OptIn(ExperimentalLayoutApi::class)
+    FlowRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        maxItemsInEachRow = 4
+    ) {
+        options.forEach { opt ->
+            val isSelected = opt.equals(selected, ignoreCase = true)
+            AssistChip(
+                modifier = Modifier.height(32.dp),
+                onClick = { if (enabled) onSelect(opt) },
+                label = {
+                    // UI label follow user wording: CANCELED, but backend uses CANCELLED
+                    val label = if (opt == "CANCELLED") "CANCELED" else opt
+                    Text(label, style = MaterialTheme.typography.labelSmall)
+                },
+                enabled = enabled,
+                colors = if (isSelected)
+                    AssistChipDefaults.assistChipColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        labelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                else
+                    AssistChipDefaults.assistChipColors()
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatusFilterBarHeadAll(
+    selected: String,
+    enabled: Boolean,
+    onSelect: (String) -> Unit
+) {
+    val options = listOf("ALL", "APPROVED", "REJECTED", "CANCELLED")
+
+    @OptIn(ExperimentalLayoutApi::class)
+    FlowRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        options.forEach { opt ->
+            val isSelected = opt.equals(selected, ignoreCase = true)
+            AssistChip(
+                modifier = Modifier.height(32.dp),
+                onClick = { if (enabled) onSelect(opt) },
+                label = { Text(opt, style = MaterialTheme.typography.labelSmall) },
+                enabled = enabled,
+                colors = if (isSelected)
+                    AssistChipDefaults.assistChipColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        labelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                else AssistChipDefaults.assistChipColors()
+            )
+        }
+    }
+}
+
 
 private fun showDatePicker(context: Context, initial: LocalDate, onPicked: (LocalDate) -> Unit) {
     val cal = Calendar.getInstance().apply {

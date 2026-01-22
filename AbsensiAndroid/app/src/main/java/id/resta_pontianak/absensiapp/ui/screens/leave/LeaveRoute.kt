@@ -27,6 +27,11 @@ fun LeaveRoute(onBack: () -> Unit) {
         onSetReason = vm::setReason,
         onSubmitCreate = vm::submitCreate,
 
+        // MEMBER: filter & cancel
+        onSetStatusFilter = vm::setStatusFilter,
+        onSetHeadAllStatusFilter = vm::setHeadAllStatusFilter,
+        onCancel = vm::cancel,
+
         onApprove = vm::approve,
         onReject = vm::reject
     )

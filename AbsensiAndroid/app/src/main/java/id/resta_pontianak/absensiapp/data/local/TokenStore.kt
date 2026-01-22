@@ -4,7 +4,10 @@ import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 
 private val Context.dataStore by preferencesDataStore("auth")
 
@@ -119,6 +122,40 @@ class TokenStore(private val ctx: Context) {
             else it.remove(KEY_PROFILE_PHOTO_KEY)
         }
     }
+
+    val profileFlow: Flow<LocalProfile?> = ctx.dataStore.data
+        .map { prefs ->
+            val uid = prefs[KEY_USER_ID] ?: return@map null
+            val nrp = prefs[KEY_NRP] ?: return@map null
+            val name = prefs[KEY_FULLNAME] ?: return@map null
+            val satker = prefs[KEY_SATKER] ?: return@map null
+
+            LocalProfile(
+                userId = uid,
+                nrp = nrp,
+                fullName = name,
+                satkerId = satker,
+                role = prefs[KEY_ROLE],
+                satkerName = prefs[KEY_SATKER_NAME],
+                satkerCode = prefs[KEY_SATKER_CODE],
+                profilePhotoKey = prefs[KEY_PROFILE_PHOTO_KEY]
+            )
+        }
+        // penting supaya tidak spam refresh kalau value sama
+        .distinctUntilChanged()
+
+    data class SessionKey(val userId: String?, val role: String?, val satkerId: String?)
+
+    val sessionKeyFlow: Flow<SessionKey> = ctx.dataStore.data
+        .map { prefs ->
+            SessionKey(
+                userId = prefs[KEY_USER_ID],
+                role = prefs[KEY_ROLE],
+                satkerId = prefs[KEY_SATKER]
+
+            )
+        }
+        .distinctUntilChanged()
 }
 
 data class LocalProfile(

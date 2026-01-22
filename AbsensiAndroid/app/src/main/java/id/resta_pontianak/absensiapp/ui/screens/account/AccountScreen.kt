@@ -56,12 +56,14 @@ fun AccountScreen(
     onRiwayatKehadiran: () -> Unit,
     onRiwayatTunkin: () -> Unit,
     onJadwalDinas: () -> Unit,
+    pendingDutySubmittedCount: Int,
     onLogout: () -> Unit,
     profileUrl: (String) -> String,
     imageLoader: ImageLoader,
     onClickChangePhoto: () -> Unit,
     isUploading: Boolean,
     onChangePassword: () -> Unit,
+    leaveSubmittedBadgeCount: Int = 0,
 ) {
     Column(
         modifier = Modifier
@@ -92,13 +94,13 @@ fun AccountScreen(
         ) {
             item { MenuRow("Informasi Profil", Icons.Filled.Person, onInformasiProfil) }
 
-            item { MenuRow("Riwayat Perizinan", Icons.Filled.ReceiptLong, onRiwayatPerizinan) }
+            item { MenuRow("Riwayat Perizinan", Icons.Filled.ReceiptLong, onRiwayatPerizinan, badgeCount = leaveSubmittedBadgeCount) }
 
             item { MenuRow("Riwayat Kehadiran", Icons.Filled.Schedule, onRiwayatKehadiran) }
 
             item { MenuRow("Riwayat Tunjangan Kinerja", Icons.Filled.Payments, onRiwayatTunkin) }
 
-            item { MenuRow("Jadwal Dinas", Icons.Filled.CalendarMonth, onJadwalDinas) }
+            item { MenuRow("Jadwal Dinas", Icons.Filled.CalendarMonth, onJadwalDinas, badgeCount = pendingDutySubmittedCount) }
 
             item { MenuRow("Change Password", Icons.Filled.Lock, onChangePassword) }
 
@@ -268,6 +270,7 @@ private fun MenuRow(
     title: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     onClick: () -> Unit,
+    badgeCount: Int? = null,
     danger: Boolean = false
 ) {
     Card(
@@ -309,6 +312,25 @@ private fun MenuRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+
+            Spacer(Modifier.weight(1f))
+
+            val bc = badgeCount ?: 0
+            if (bc > 0) {
+                val label = if (bc > 99) "99+" else bc.toString()
+                Surface(
+                    shape = RoundedCornerShape(999.dp),
+                    color = Color(0xFFE53935)
+                ) {
+                    Text(
+                        text = label,
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+            }
         }
     }
 }

@@ -30,7 +30,38 @@ pub fn leave_request_handler() -> Router {
         .route("/decided", get(list_decided_leaves))
         .route("/{id}/approve", post(approve_leave))
         .route("/{id}/reject", post(reject_leave))
+        .route("/{id}/cancel", post(cancel_leave))
         .route("/quick-approve", post(quick_approve_leave))
+}
+
+pub async fn cancel_leave(
+    Extension(app_state): Extension<Arc<AppState>>,
+    Extension(user_claims): Extension<AuthMiddleware>,
+    Path(id): Path<Uuid>,
+) -> Result<impl IntoResponse, HttpError> {
+    // sesuai permintaan: hanya MEMBER yang bisa membatalkan
+    if user_claims.user_claims.role != UserRole::Member {
+        return Err(HttpError::unauthorized("Forbidden, hanya MEMBER yang bisa membatalkan ijin"));
+    }
+
+    let affected = app_state
+        .db_client
+        .cancel_leave_request_by_user(id, user_claims.user_claims.user_id, None)
+        .await
+        .map_err(|e| HttpError::server_error(e.to_string()))?;
+
+    if affected == 0 {
+        return Err(HttpError::bad_request(
+            "Ijin tidak ditemukan / bukan milik anda / status bukan SUBMITTED".to_string(),
+        ));
+    }
+
+    let response = SuccessResponse {
+        status: "200".to_string(),
+        data: "Success cancel ijin".to_string(),
+    };
+
+    Ok(Json(response))
 }
 
 pub async fn create_leave(
@@ -95,7 +126,7 @@ pub async fn list_my_leaves(
         .validate()
         .map_err(|e| HttpError::bad_request(e.to_string()))?;
 
-    let rows = app_state
+    let mut rows = app_state
         .db_client
         .list_leave_request_by_user_from_to(
             user_claims.user_claims.user_id,
@@ -104,6 +135,14 @@ pub async fn list_my_leaves(
         )
         .await
         .map_err(|e| HttpError::server_error(e.to_string()))?;
+
+    // Optional status filter (handled server-side to match mobile filter)
+    if let Some(status_str) = query_params.status.clone().filter(|s| !s.trim().is_empty()) {
+        let st = status_str
+            .parse::<LeaveStatus>()
+            .map_err(|_| HttpError::bad_request("status ijin invalid".to_string()))?;
+        rows.retain(|r| r.status == st);
+    }
 
     let response = LeaveRequestsResp {
         status: "200",
@@ -127,7 +166,7 @@ pub async fn list_all_leaves(
         .validate()
         .map_err(|e| HttpError::bad_request(e.to_string()))?;
 
-    let rows = if user_claims.user_claims.role == UserRole::Superadmin {
+    let mut rows = if user_claims.user_claims.role == UserRole::Superadmin {
         app_state
         .db_client
             .list_leave_request_all_from_to(
@@ -145,6 +184,13 @@ pub async fn list_all_leaves(
         .map_err(|e| HttpError::server_error(e.to_string()))?
 
     };
+
+    if let Some(status_str) = query_params.status.clone().filter(|s| !s.trim().is_empty()) {
+        let st = status_str
+            .parse::<LeaveStatus>()
+            .map_err(|_| HttpError::bad_request("status ijin invalid".to_string()))?;
+        rows.retain(|r| r.status == st);
+    }
 
 
     let response = LeaveRequestsResp {
