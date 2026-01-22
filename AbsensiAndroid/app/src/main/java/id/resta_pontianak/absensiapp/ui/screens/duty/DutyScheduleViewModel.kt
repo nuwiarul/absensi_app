@@ -7,7 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import id.resta_pontianak.absensiapp.data.network.CreateDutyScheduleReq
-import id.resta_pontianak.absensiapp.data.network.DutyScheduleDto
+import id.resta_pontianak.absensiapp.data.network.DutyScheduleModels
 import id.resta_pontianak.absensiapp.data.network.DutyScheduleRequestDto
 import id.resta_pontianak.absensiapp.data.repo.DutyScheduleRepository
 import id.resta_pontianak.absensiapp.data.repo.SettingsRepository
@@ -25,7 +25,7 @@ class DutyScheduleViewModel @javax.inject.Inject constructor(
     private val settingsRepo: SettingsRepository
 ) : ViewModel() {
 
-    var schedules by mutableStateOf<List<DutyScheduleDto>>(emptyList())
+    var schedules by mutableStateOf<List<DutyScheduleModels>>(emptyList())
         private set
 
     var requests by mutableStateOf<List<DutyScheduleRequestDto>>(emptyList())

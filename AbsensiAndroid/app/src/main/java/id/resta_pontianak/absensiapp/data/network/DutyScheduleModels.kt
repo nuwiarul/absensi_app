@@ -1,6 +1,6 @@
 package id.resta_pontianak.absensiapp.data.network
 
-data class DutyScheduleDto(
+data class DutyScheduleModels(
     val id: String,
     val satker_id: String? = null,
     val user_id: String? = null,

@@ -3,7 +3,7 @@ package id.resta_pontianak.absensiapp.data.repo
 import id.resta_pontianak.absensiapp.data.local.TokenStore
 import id.resta_pontianak.absensiapp.data.network.ApiService
 import id.resta_pontianak.absensiapp.data.network.CreateDutyScheduleReq
-import id.resta_pontianak.absensiapp.data.network.DutyScheduleDto
+import id.resta_pontianak.absensiapp.data.network.DutyScheduleModels
 import id.resta_pontianak.absensiapp.data.network.DutyScheduleRequestDto
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -13,7 +13,7 @@ class DutyScheduleRepository @Inject constructor(
     private val api: ApiService,
     private val tokenStore: TokenStore
 ) {
-    suspend fun listDutySchedules(from: String, to: String): List<DutyScheduleDto> {
+    suspend fun listDutySchedules(from: String, to: String): List<DutyScheduleModels> {
         val profile = tokenStore.getProfile() ?: return emptyList()
         return api.listDutySchedules(
             from = from,

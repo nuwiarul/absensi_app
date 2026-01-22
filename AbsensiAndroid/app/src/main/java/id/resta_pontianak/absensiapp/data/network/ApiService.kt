@@ -42,6 +42,23 @@ interface ApiService {
         @Query("to") to: String
     ): ApiResponse<List<AttendanceSessionDto>>
 
+    // ===== Working days (calendar) =====
+    @GET("working-days")
+    suspend fun workingDays(
+        @Query("satker_id") satkerId: String,
+        @Query("from") from: String,
+        @Query("to") to: String
+    ): ApiResponse<List<WorkingDayDto>>
+
+    // ===== Duty schedules =====
+    // NOTE: backend akan force satker_id sesuai satker user untuk non-superadmin
+    @GET("duty-schedules")
+    suspend fun dutySchedules(
+        @Query("from") fromIso: String,
+        @Query("to") toIso: String,
+        @Query("user_id") userId: String
+    ): ApiResponse<List<DutyScheduleDto>>
+
     @POST("leave-requests/create")
     suspend fun createLeave(@Body req: LeaveCreateReq): LeaveCreateResp // endpoint ini tidak wrapper
 
@@ -118,7 +135,7 @@ interface ApiService {
         @Query("to") to: String,
         @Query("satker_id") satkerId: String,
         @Query("user_id") userId: String
-    ): ApiResponse<List<DutyScheduleDto>>
+    ): ApiResponse<List<DutyScheduleModels>>
 
     @GET("duty-schedule-requests")
     suspend fun listDutyScheduleRequests(
