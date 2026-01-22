@@ -29,6 +29,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dutyRangeUi
+import fmtId
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -37,7 +39,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private val fmtId = DateTimeFormatter.ofPattern("d MMM yyyy", Locale("id", "ID"))
+
 
 private fun formatLocalDateId(d: LocalDate): String = d.format(fmtId)
 
@@ -95,7 +97,7 @@ fun DutyScheduleScreen(
         LazyColumn {
             items(vm.schedules) { s ->
                 Column(Modifier.padding(16.dp)) {
-                    Text(
+                    /*Text(
                         text = formatDateId(s.start_at, zoneId),
                         style = MaterialTheme.typography.titleMedium
                     )
@@ -103,7 +105,23 @@ fun DutyScheduleScreen(
                     Text(
                         text = "${formatTimeOnly(s.start_at, zoneId)} - ${formatTimeOnly(s.end_at, zoneId)}",
                         style = MaterialTheme.typography.bodyMedium
+                    )*/
+                    val t = dutyRangeUi(s.start_at, s.end_at, zoneId)
+
+                    Text(
+                        text = t.line1,
+                        style = MaterialTheme.typography.titleMedium
                     )
+                    if (t.line2 != null) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = t.line2!!,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Spacer(Modifier.height(4.dp))
+                    }
                     Spacer(Modifier.height(8.dp))
 
                     //DutyTypeChip(type = s.schedule_type)

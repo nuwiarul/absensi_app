@@ -62,7 +62,7 @@ fun DutyScheduleRoute(
                 },
                 actions = {
                     // ✅ Tombol tambah pindah ke kanan atas (hanya tab Pending)
-                    if (tab == 1) {
+                    if (tab == 1 && vm.isMember) {
 
                         Button(
                             onClick = { vm.updateShowCreateDialog(true) }
@@ -108,6 +108,9 @@ fun DutyScheduleRoute(
     if (vm.showCreateDialog && zoneId != null) {
         CreateDutyScheduleDialog(
             zoneId = zoneId!!,
+            isSubmitting = vm.loading,
+            submitError = vm.createError,
+            onClearSubmitError = vm::clearCreateError,
             onDismiss = { vm.updateShowCreateDialog(false) },
             onSubmit = { startLocal, endLocal, scheduleType, title, note ->
                 vm.submitRequest(

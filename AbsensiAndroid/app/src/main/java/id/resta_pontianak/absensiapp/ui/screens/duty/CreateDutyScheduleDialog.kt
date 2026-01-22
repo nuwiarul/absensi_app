@@ -43,6 +43,9 @@ private val TIME_FMT = DateTimeFormatter.ofPattern("HH:mm", Locale("id", "ID"))
 @Composable
 fun CreateDutyScheduleDialog(
     zoneId: ZoneId,
+    isSubmitting: Boolean,
+    submitError: String?,
+    onClearSubmitError: () -> Unit,
     onDismiss: () -> Unit,
     onSubmit: (startLocal: ZonedDateTime, endLocal: ZonedDateTime, scheduleType: String, title: String?, note: String?) -> Unit
 ) {
@@ -53,7 +56,11 @@ fun CreateDutyScheduleDialog(
     var startTime by remember { mutableStateOf(now.toLocalTime().withSecond(0).withNano(0)) }
 
     var endDate by remember { mutableStateOf(now.toLocalDate()) }
-    var endTime by remember { mutableStateOf(now.toLocalTime().plusHours(1).withSecond(0).withNano(0)) }
+    var endTime by remember {
+        mutableStateOf(
+            now.toLocalTime().plusHours(1).withSecond(0).withNano(0)
+        )
+    }
 
     var scheduleType by remember { mutableStateOf("SPECIAL") }
     var title by remember { mutableStateOf("") }
@@ -61,7 +68,7 @@ fun CreateDutyScheduleDialog(
 
     var error by remember { mutableStateOf<String?>(null) }
 
-    val scheduleOptions = listOf("REGULAR", "SHIFT", "ONCALL", "SPECIAL")
+    val scheduleOptions = listOf("REGULAR", "SHIFT", "ON_CALL", "SPECIAL")
     var expanded by remember { mutableStateOf(false) }
 
     fun pickDate(
@@ -108,7 +115,10 @@ fun CreateDutyScheduleDialog(
     }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            onDismiss
+            onClearSubmitError()
+        },
         title = { Text("Ajukan Jadwal Dinas") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -164,14 +174,20 @@ fun CreateDutyScheduleDialog(
 
                 OutlinedTextField(
                     value = title,
-                    onValueChange = { title = it },
+                    onValueChange = {
+                        title = it
+                        onClearSubmitError()
+                    },
                     label = { Text("Judul (opsional)") },
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 OutlinedTextField(
                     value = note,
-                    onValueChange = { note = it },
+                    onValueChange = {
+                        note = it
+                        onClearSubmitError()
+                    },
                     label = { Text("Catatan (opsional)") },
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -179,6 +195,15 @@ fun CreateDutyScheduleDialog(
                 error?.let {
                     Spacer(Modifier.height(4.dp))
                     Text(it, color = MaterialTheme.colorScheme.error)
+                }
+
+                if (!submitError.isNullOrBlank()) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        submitError,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
         },
@@ -189,6 +214,7 @@ fun CreateDutyScheduleDialog(
                     error = msg
                     return@Button
                 }
+                onClearSubmitError()
                 val start = ZonedDateTime.of(startDate, startTime, zoneId)
                 val end = ZonedDateTime.of(endDate, endTime, zoneId)
                 onSubmit(start, end, scheduleType, title, note)
@@ -197,7 +223,10 @@ fun CreateDutyScheduleDialog(
             }
         },
         dismissButton = {
-            OutlinedButton(onClick = onDismiss) {
+            OutlinedButton(onClick = {
+                onClearSubmitError()
+                onDismiss()
+            }) {
                 Text("Batal")
             }
         }

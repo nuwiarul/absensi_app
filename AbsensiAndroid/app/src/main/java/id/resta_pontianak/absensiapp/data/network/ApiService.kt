@@ -153,4 +153,15 @@ interface ApiService {
     suspend fun cancelDutyScheduleRequest(
         @Path("id") id: String
     ): ApiResponse<String>
+
+    @PUT("duty-schedule-requests/{id}/approve")
+    suspend fun approveDutyScheduleRequest(
+        @Path("id") id: String
+    ): ApiResponse<String>
+
+    @PUT("duty-schedule-requests/{id}/reject")
+    suspend fun rejectDutyScheduleRequest(
+        @Path("id") id: String,
+        @Body body: RejectDutyScheduleRequestReq
+    ): ApiResponse<String>
 }

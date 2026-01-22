@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DateRangePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -21,6 +22,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
@@ -31,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import dutyRangeUi
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
@@ -52,6 +55,10 @@ fun PendingScheduleScreen(
 ) {
     val scope = rememberCoroutineScope()
     var showPicker by remember { mutableStateOf(false) }
+
+    var showReject by remember { mutableStateOf(false) }
+    var rejectTargetId by remember { mutableStateOf<String?>(null) }
+    var rejectReason by remember { mutableStateOf("") }
 
     if (zoneId == null) {
         Column(
@@ -127,7 +134,23 @@ fun PendingScheduleScreen(
     LazyColumn {
         items(vm.requests) { r ->
             Column(Modifier.padding(16.dp)) {
+                val t = dutyRangeUi(r.start_at, r.end_at, zoneId)
+
                 Text(
+                    text = t.line1,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                if (t.line2 != null) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = t.line2!!,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    Spacer(Modifier.height(4.dp))
+                }
+                /*Text(
                     text = formatDateId(r.start_at, zoneId),
                     style = MaterialTheme.typography.titleMedium
                 )
@@ -135,7 +158,21 @@ fun PendingScheduleScreen(
                 Text(
                     text = "${formatTimeOnly(r.start_at, zoneId)} - ${formatTimeOnly(r.end_at, zoneId)}",
                     style = MaterialTheme.typography.bodyMedium
+                )*/
+
+                Text(
+                    text = "${r.user_full_name ?: "-"} • ${r.user_nrp ?: "-"}",
+                    style = MaterialTheme.typography.bodyMedium
                 )
+                if (!r.satker_name.isNullOrBlank() || !r.satker_code.isNullOrBlank()) {
+                    Text(
+                        text = if (r.satker_code.isNullOrBlank()) (r.satker_name ?: "-")
+                        else "${r.satker_name ?: "-"} (${r.satker_code})",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
                 Spacer(Modifier.height(8.dp))
 
                 Row(
@@ -167,7 +204,36 @@ fun PendingScheduleScreen(
 
                 if (r.status.uppercase() == "SUBMITTED") {
                     Spacer(Modifier.height(10.dp))
-                    OutlinedButton(
+
+                    if (vm.isSatkerHead) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Button(onClick = {
+                                vm.approveRequest(
+                                    id = r.id,
+                                    onSuccess = { msg -> scope.launch { snackbarHost.showSnackbar(msg) } },
+                                    onError = { msg -> scope.launch { snackbarHost.showSnackbar(msg) } }
+                                )
+                            }) { Text("Approve") }
+
+                            OutlinedButton(onClick = {
+                                rejectTargetId = r.id
+                                rejectReason = ""
+                                showReject = true
+                            }) { Text("Reject") }
+                        }
+                    } else {
+                        OutlinedButton(
+                            onClick = {
+                                vm.cancelRequest(
+                                    id = r.id,
+                                    onSuccess = { msg -> scope.launch { snackbarHost.showSnackbar(msg) } },
+                                    onError = { msg -> scope.launch { snackbarHost.showSnackbar(msg) } }
+                                )
+                            }
+                        ) { Text("Batalkan") }
+                    }
+
+                    /*OutlinedButton(
                         onClick = {
                             vm.cancelRequest(
                                 id = r.id,
@@ -181,7 +247,7 @@ fun PendingScheduleScreen(
                         }
                     ) {
                         Text("Batalkan")
-                    }
+                    }*/
                 }
             }
             androidx.compose.material3.Divider()
@@ -197,6 +263,53 @@ fun PendingScheduleScreen(
             onApply = { f, t ->
                 showPicker = false
                 vm.setRange(f, t) // ✅ ini refresh schedules + requests
+            }
+        )
+    }
+
+    if (showReject) {
+        AlertDialog(
+            onDismissRequest = { showReject = false },
+            title = { Text("Reject Pengajuan") },
+            text = {
+                Column {
+                    Text("Alasan reject wajib diisi")
+                    Spacer(Modifier.height(8.dp))
+                    TextField(
+                        value = rejectReason,
+                        onValueChange = { rejectReason = it },
+                        singleLine = false,
+                        minLines = 2,
+                        placeholder = { Text("Mis: jadwal tidak sesuai") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val id = rejectTargetId
+                        if (id.isNullOrBlank()) {
+                            showReject = false
+                            return@TextButton
+                        }
+                        val reason = rejectReason.trim()
+                        if (reason.isBlank()) {
+                            scope.launch { snackbarHost.showSnackbar("Catatan reject wajib diisi") }
+                            return@TextButton
+                        }
+                        showReject = false
+                        vm.rejectRequest(
+                            id = id,
+                            reason = reason,
+                            onSuccess = { msg -> scope.launch { snackbarHost.showSnackbar(msg) } },
+                            onError = { msg -> scope.launch { snackbarHost.showSnackbar(msg) } }
+                        )
+                    }
+                ) { Text("Reject") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showReject = false }) { Text("Batal") }
             }
         )
     }

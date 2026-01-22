@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import id.resta_pontianak.absensiapp.data.local.TokenStore
 import id.resta_pontianak.absensiapp.data.network.CreateDutyScheduleReq
 import id.resta_pontianak.absensiapp.data.network.DutyScheduleModels
 import id.resta_pontianak.absensiapp.data.network.DutyScheduleRequestDto
@@ -22,8 +23,26 @@ import java.time.ZonedDateTime
 @HiltViewModel
 class DutyScheduleViewModel @javax.inject.Inject constructor(
     private val repo: DutyScheduleRepository,
-    private val settingsRepo: SettingsRepository
+    private val settingsRepo: SettingsRepository,
+    private val tokenStore: TokenStore
 ) : ViewModel() {
+
+    // role dari TokenStore (dipakai buat menentukan tombol aksi)
+    var myRole by mutableStateOf<String?>(null)
+        private set
+
+    val isSatkerHead: Boolean
+        get() = myRole?.equals("SATKER_HEAD", ignoreCase = true) == true
+
+    val isMember: Boolean
+        get() = myRole?.equals("MEMBER", ignoreCase = true) == true
+
+    init {
+        // load sekali dari local storage (tidak perlu hit backend)
+        viewModelScope.launch {
+            myRole = tokenStore.getProfile()?.role
+        }
+    }
 
     var schedules by mutableStateOf<List<DutyScheduleModels>>(emptyList())
         private set
@@ -37,6 +56,7 @@ class DutyScheduleViewModel @javax.inject.Inject constructor(
     var error by mutableStateOf<String?>(null)
         private set
 
+
     var selectedStatus by mutableStateOf("SUBMITTED")
         private set
 
@@ -49,6 +69,12 @@ class DutyScheduleViewModel @javax.inject.Inject constructor(
     fun updateSelectedStatus(v: String) {
         selectedStatus = v
     }
+
+    var createError by mutableStateOf<String?>(null)
+        private set
+
+    fun clearCreateError() { createError = null }
+
 
     // ✅ range state untuk UI filter
     var rangeFrom by mutableStateOf<LocalDate?>(null)
@@ -159,6 +185,7 @@ class DutyScheduleViewModel @javax.inject.Inject constructor(
     ) = viewModelScope.launch {
         loading = true
         error = null
+        createError = null
         try {
             val startUtc = startLocal.withZoneSameInstant(ZoneId.of("UTC")).toInstant().toString()
             val endUtc = endLocal.withZoneSameInstant(ZoneId.of("UTC")).toInstant().toString()
@@ -177,6 +204,7 @@ class DutyScheduleViewModel @javax.inject.Inject constructor(
             onSuccess("Berhasil mengajukan jadwal dinas")
         } catch (e: Exception) {
             val msg = apiErrorMessage(e)
+            createError = msg
             onError(msg)
         } finally {
             loading = false
@@ -194,6 +222,52 @@ class DutyScheduleViewModel @javax.inject.Inject constructor(
             repo.cancelDutyScheduleRequest(id)
             refreshRequests()
             onSuccess("Berhasil membatalkan pengajuan")
+        } catch (e: Exception) {
+            onError(apiErrorMessage(e))
+        } finally {
+            loading = false
+        }
+    }
+
+    fun approveRequest(
+        id: String,
+        onSuccess: (String) -> Unit,
+        onError: (String) -> Unit
+    ) = viewModelScope.launch {
+        // hanya SATKER_HEAD yang boleh approve
+        if (!isSatkerHead) {
+            onError("forbidden")
+            return@launch
+        }
+        loading = true
+        error = null
+        try {
+            repo.approveDutyScheduleRequest(id)
+            refreshRequests()
+            onSuccess("Berhasil approve")
+        } catch (e: Exception) {
+            onError(apiErrorMessage(e))
+        } finally {
+            loading = false
+        }
+    }
+
+    fun rejectRequest(
+        id: String,
+        reason: String,
+        onSuccess: (String) -> Unit,
+        onError: (String) -> Unit
+    ) = viewModelScope.launch {
+        if (!isSatkerHead) {
+            onError("forbidden")
+            return@launch
+        }
+        loading = true
+        error = null
+        try {
+            repo.rejectDutyScheduleRequest(id, reason)
+            refreshRequests()
+            onSuccess("Berhasil reject")
         } catch (e: Exception) {
             onError(apiErrorMessage(e))
         } finally {
