@@ -1,5 +1,6 @@
 package id.resta_pontianak.absensiapp.ui.screens.history
 
+import android.app.Activity
 import android.app.DatePickerDialog
 import android.content.Context
 import androidx.compose.foundation.layout.*
@@ -11,10 +12,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowInsetsControllerCompat
 import coil.ImageLoader
 import coil.compose.AsyncImage
+import id.resta_pontianak.absensiapp.ui.helper.SetStatusBar
+import id.resta_pontianak.absensiapp.ui.screens.dashboard.BlueHeader
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.datetime.LocalDate
 import java.util.Calendar
@@ -56,6 +63,7 @@ fun AttendanceHistoryScreen(
     }
 
     val ctx = LocalContext.current
+    SetStatusBar(BlueHeader, false)
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHost) },
@@ -66,9 +74,15 @@ fun AttendanceHistoryScreen(
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) }
                 },
                 actions = {
-                    TextButton(onClick = onResetMonth) { Text("Bulan Ini") }
+                    TextButton(onClick = onResetMonth) { Text("Bulan Ini", color = Color.White) }
                 },
-                windowInsets = WindowInsets(0, 0, 0, 0) // opsional: bikin lebih rapat ke atas
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = BlueHeader,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White,
+                    actionIconContentColor = Color.White
+                )
+                //windowInsets = WindowInsets(0, 0, 0, 0) // opsional: bikin lebih rapat ke atas
             )
         }
     ) { padding ->

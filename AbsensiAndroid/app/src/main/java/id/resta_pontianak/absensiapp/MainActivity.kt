@@ -20,6 +20,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import dagger.hilt.android.AndroidEntryPoint
 import id.resta_pontianak.absensiapp.data.local.TokenStore
 import id.resta_pontianak.absensiapp.data.network.ApiClient
@@ -40,8 +42,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
 
+        //WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        enableEdgeToEdge()
+        //window.statusBarColor = android.graphics.Color.TRANSPARENT
+
+        //WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = false
+
+        //enableEdgeToEdge()
         setContent {
             AbsensiAppTheme {
 

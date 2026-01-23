@@ -23,11 +23,15 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import id.resta_pontianak.absensiapp.ui.helper.SetStatusBar
+import id.resta_pontianak.absensiapp.ui.screens.dashboard.BlueHeader
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +47,8 @@ fun ProfileScreen(
     onEditPhone: (String) -> Unit,
     onSaveEdit: () -> Unit
 ) {
+
+    SetStatusBar(BlueHeader, false)
     Scaffold(
         snackbarHost = snackbarHost,
         topBar = {
@@ -56,9 +62,15 @@ fun ProfileScreen(
                 actions = {
                     // ✅ tombol edit di kanan atas (sesuai request)
                     TextButton(onClick = onOpenEdit, enabled = !state.isLoading) {
-                        Text("Edit Profil")
+                        Text("Edit Profil", color = Color.White)
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = BlueHeader,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White,
+                    actionIconContentColor = Color.White
+                )
             )
         }
     ) { padding ->

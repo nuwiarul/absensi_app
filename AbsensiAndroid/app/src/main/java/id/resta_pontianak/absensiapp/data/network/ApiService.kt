@@ -59,6 +59,10 @@ interface ApiService {
         @Query("user_id") userId: String
     ): ApiResponse<List<DutyScheduleDto>>
 
+    // ===== Announcements (visible for mobile) =====
+    @GET("announcements")
+    suspend fun announcements(): ApiResponse<List<AnnouncementDto>>
+
     @POST("leave-requests/create")
     suspend fun createLeave(@Body req: LeaveCreateReq): LeaveCreateResp // endpoint ini tidak wrapper
 

@@ -1,5 +1,6 @@
 package id.resta_pontianak.absensiapp.ui.screens.duty
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -7,9 +8,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -17,6 +20,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -26,7 +30,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import id.resta_pontianak.absensiapp.ui.helper.SetStatusBar
+import id.resta_pontianak.absensiapp.ui.screens.dashboard.BlueHeader
 import kotlinx.coroutines.launch
 import java.time.ZoneId
 
@@ -50,6 +58,8 @@ fun DutyScheduleRoute(
         if (tab == 0) vm.refreshSchedules() else vm.refreshRequests()
     }
 
+    SetStatusBar(BlueHeader, false)
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -64,13 +74,21 @@ fun DutyScheduleRoute(
                     // ✅ Tombol tambah pindah ke kanan atas (hanya tab Pending)
                     if (tab == 1 && vm.isMember) {
 
-                        Button(
-                            onClick = { vm.updateShowCreateDialog(true) }
+                        OutlinedButton (
+                            onClick = { vm.updateShowCreateDialog(true) },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.6f)),
                         ) {
                             Text("Ajukan Jadwal Dinas")
                         }
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = BlueHeader,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White,
+                    actionIconContentColor = Color.White
+                )
             )
         },
         snackbarHost = { SnackbarHost(snackbarHost) },

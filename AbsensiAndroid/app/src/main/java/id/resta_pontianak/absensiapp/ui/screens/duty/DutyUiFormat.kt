@@ -44,6 +44,27 @@ object DateRangeUtil {
 
         return ISO_INSTANT.format(startUtc) to ISO_INSTANT.format(endUtc)
     }
+
+    fun nowToNextTwoMonthsRange(timezoneId: String): Pair<String, String> {
+        val zone = runCatching { ZoneId.of(timezoneId) }
+            .getOrElse { ZoneId.of("Asia/Jakarta") }
+
+        val today = LocalDate.now(zone)
+
+        // start: hari ini 00:00:00 (local TZ)
+        val startLocal = today.atStartOfDay(zone)
+
+        // end: today + 2 months, 23:59:59 (local TZ)
+        val endDay = today.plusMonths(2)
+        val endLocal = endDay
+            .atTime(23, 59, 59)
+            .atZone(zone)
+
+        val startUtc = startLocal.withZoneSameInstant(ZoneOffset.UTC).toInstant()
+        val endUtc = endLocal.withZoneSameInstant(ZoneOffset.UTC).toInstant()
+
+        return ISO_INSTANT.format(startUtc) to ISO_INSTANT.format(endUtc)
+    }
 }
 
 public fun dutyRangeUi(startIso: String, endIso: String, zoneId: ZoneId): DutyRangeUi {

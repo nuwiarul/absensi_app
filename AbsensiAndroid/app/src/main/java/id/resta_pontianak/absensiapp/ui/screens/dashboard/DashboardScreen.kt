@@ -32,18 +32,56 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.AssignmentTurnedIn
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material3.Divider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 import id.resta_pontianak.absensiapp.R
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Surface
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import id.resta_pontianak.absensiapp.ui.helper.SetStatusBar
 
 
+public val BlueHeader = Color(0xFF0B2A5A)
+public val BlueCard = Color(0xFF123D8A)
+public val BlueCard2 = Color(0xFF0F2F68)
+public val Muted = Color(0xFF6B7280)
 
-private val BlueHeader = Color(0xFF0B2A5A)
-private val BlueCard = Color(0xFF123D8A)
-private val BlueCard2 = Color(0xFF0F2F68)
-private val Muted = Color(0xFF6B7280)
+private enum class AttendanceCardState { Ready, Done, Locked }
+
+private fun hasTime(t: String): Boolean {
+    val x = t.trim()
+    return x.isNotEmpty() && x != "--:--" && x != "—" && x != "-"
+}
 
 @Composable
 fun DashboardScreen(
@@ -67,129 +105,195 @@ fun DashboardScreen(
     onClickIjin: () -> Unit,
     onClickRiwayatAbsen: () -> Unit,
     onLogoutClick: () -> Unit,
+    onViewAllAnnouncements: () -> Unit,
+    announcements: List<DashboardAnnouncementUi>,
+    dutyUpcoming: List<DashboardDutyUi>,
 ) {
-    Column(Modifier.fillMaxSize().background(Color(0xFFF5F7FB))) {
-        Header(fullName = fullName, nrp = nrp, satkerName=satkerName, onLogout = onLogoutClick)
 
-        Spacer(Modifier.height(12.dp))
+    var selected by remember { mutableStateOf<DashboardAnnouncementUi?>(null) }
 
-        if (!workDateText.isNullOrBlank()) {
-            Text(
-                text = workDateText,
-                modifier = Modifier.padding(horizontal = 16.dp),
-                color = Muted,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(Modifier.height(8.dp))
-        }
+    var selectedDuty by remember { mutableStateOf<DashboardDutyUi?>(null) }
 
+    SetStatusBar(BlueHeader, false)
 
-        Row(
-            Modifier.padding(horizontal = 16.dp).fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF5F7FB))
+    ) {
+        Header(fullName = fullName, nrp = nrp, satkerName = satkerName, onLogout = onLogoutClick)
+
+        //Spacer(Modifier.height(12.dp))
+
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f), // penting biar area ini yang scroll
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = 0.dp,
+                bottom = 16.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            AttendanceCard(
-                title = "Masuk",
-                time = checkInTime,
-                subtitle = checkInSubtitle,
-                onClick = onClickMasuk,
-                modifier = Modifier.weight(1f)
-            )
-            AttendanceCard(
-                title = "Keluar",
-                time = checkOutTime,
-                subtitle = checkOutSubtitle,
-                onClick = onClickKeluar,
-                modifier = Modifier.weight(1f)
-            )
+            item {
+                if (!workDateText.isNullOrBlank()) {
+                    Text(
+                        text = workDateText,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        color = Muted,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
+            item {
+                val hasIn = hasTime(checkInTime)
+                val hasOut = hasTime(checkOutTime)
+
+                val inState = if (!hasIn) AttendanceCardState.Ready else AttendanceCardState.Done
+                val outState = when {
+                    hasOut -> AttendanceCardState.Done
+                    hasIn -> AttendanceCardState.Ready
+                    else -> AttendanceCardState.Locked
+                }
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    AttendanceCard(
+                        title = "Masuk",
+                        time = checkInTime,
+                        subtitle = checkInSubtitle,
+                        onClick = onClickMasuk,
+                        modifier = Modifier.weight(1f)
+                    )
+                    AttendanceCard(
+                        title = "Keluar",
+                        time = checkOutTime,
+                        subtitle = checkOutSubtitle,
+                        onClick = onClickKeluar,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+            item {
+                QuickMenu(
+                    onClickTunkin = onClickTunkin,
+                    onClickSchedule = onClickSchedule,
+                    onClickApel = onClickIjin,
+                )
+            }
+
+            item {
+                AnnouncementCard(
+                    announcements = announcements,
+                    onViewAll = onViewAllAnnouncements,
+                    onOpenDetail = { selected = it }
+                )
+            }
+
+            item {
+                ScheduleCard(
+                    items = dutyUpcoming,
+                    onOpenDetail = { selectedDuty = it }
+                )
+            }
         }
 
-        Spacer(Modifier.height(12.dp))
-
-        QuickMenu(
-            onClickTunkin = onClickTunkin,
-            onClickSchedule = onClickSchedule,
-            onClickIjin = onClickIjin,
-            onClickRiwayatAbsen = onClickRiwayatAbsen
-        )
-
-        Spacer(Modifier.height(14.dp))
-
-        AnnouncementCard(
-            title = announcementTitle,
-            body = announcementBody,
-            date = announcementDate
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        ScheduleCard(body = scheduleBody)
 
     }
+
+    if (selected != null) {
+        AnnouncementDetailSheet(
+            item = selected!!,
+            onDismiss = { selected = null }
+        )
+    }
+
+    if (selectedDuty != null) {
+        DutyDetailSheet(
+            item = selectedDuty!!,
+            onDismiss = { selectedDuty = null }
+        )
+    }
+
 }
 
 @Composable
 private fun Header(fullName: String, nrp: String, satkerName: String, onLogout: () -> Unit) {
     val topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .background(BlueHeader)
-            .padding(
-                start = 0.dp,
-                end = 16.dp,
-                bottom = 16.dp,
-                top = topInset + 6.dp
-            )
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = BlueHeader,
+        shape = RoundedCornerShape(
+            bottomStart = 24.dp,
+            bottomEnd = 24.dp
+        )
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.align(Alignment.TopStart)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(
+                    start = 4.dp,
+                    end = 16.dp,
+                    top = 6.dp,
+                    bottom = 24.dp
+                )
         ) {
-            // ✅ LOGO di kiri
-            Image(
-                painter = painterResource(id = R.drawable.logo_pontianak),
-                contentDescription = "Logo Polresta Pontianak",
-                modifier = Modifier.size(80.dp)
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.align(Alignment.TopStart)
+            ) {
+                // ✅ LOGO di kiri
+                Image(
+                    painter = painterResource(id = R.drawable.logo_pontianak),
+                    contentDescription = "Logo Polresta Pontianak",
+                    modifier = Modifier.size(80.dp)
+                )
 
-            Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(6.dp))
 
-            Column {
-                Text("Selamat Datang", color = Color.White)
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    fullName,
-                    color = Color.White,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    "NRP: $nrp",
-                    color = Color.White.copy(alpha = 0.85f),
-                    style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 14.sp)
-                )
-                Text(
-                    satkerName,
-                    color = Color.White.copy(alpha = 0.85f),
-                    style = MaterialTheme.typography.bodySmall.copy(lineHeight = 14.sp)
-                )
+                Column {
+                    Text("Selamat Datang", color = Color.White)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        fullName,
+                        color = Color.White,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        "NRP: $nrp",
+                        color = Color.White.copy(alpha = 0.85f),
+                        style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 14.sp)
+                    )
+                    Text(
+                        satkerName,
+                        color = Color.White.copy(alpha = 0.85f),
+                        style = MaterialTheme.typography.bodySmall.copy(lineHeight = 14.sp)
+                    )
+                }
+            }
+
+            IconButton(
+                onClick = onLogout,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .size(48.dp)
+                    .background(
+                        Color.White.copy(alpha = 0.12f),
+                        RoundedCornerShape(24.dp)
+                    )
+            ) {
+                Icon(Icons.Default.ExitToApp, contentDescription = "Logout", tint = Color.White)
             }
         }
-
-        IconButton(
-            onClick = onLogout,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .size(48.dp)
-                .background(
-                    Color.White.copy(alpha = 0.12f),
-                    RoundedCornerShape(24.dp)
-                )
-        ) {
-            Icon(Icons.Default.ExitToApp, contentDescription = "Logout", tint = Color.White)
-        }
     }
+
 }
 
 
@@ -203,16 +307,25 @@ private fun AttendanceCard(
 ) {
     Card(
         onClick = onClick,
-        modifier = modifier.height(140.dp),
-        shape = RoundedCornerShape(14.dp)
+        modifier = modifier
+            .fillMaxWidth()
+            .height(140.dp),
+        shape = RoundedCornerShape(14.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
-            Modifier.fillMaxSize().padding(16.dp),
+            Modifier
+                .fillMaxSize()
+                .padding(16.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Text(title, fontWeight = FontWeight.SemiBold)
             Column {
-                Text(time, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    time,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
                 Spacer(Modifier.height(6.dp))
                 Text(subtitle, color = Muted)
             }
@@ -224,79 +337,439 @@ private fun AttendanceCard(
 private fun QuickMenu(
     onClickTunkin: () -> Unit,
     onClickSchedule: () -> Unit,
-    onClickIjin: () -> Unit,
-    onClickRiwayatAbsen: () -> Unit
+    onClickApel: () -> Unit
 ) {
     Row(
-        Modifier
-            .padding(horizontal = 16.dp)
+        modifier = Modifier
             .fillMaxWidth()
             .background(BlueCard, RoundedCornerShape(18.dp))
             .padding(vertical = 14.dp),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        QuickItem("Tunkin", onClickTunkin)
-        QuickItem("Jadwal Dinas", onClickSchedule)
-        QuickItem("Ijin", onClickIjin)
-        QuickItem("Riwayat Absensi", onClickRiwayatAbsen)
+        QuickMenuItem(
+            icon = Icons.Filled.Payments,
+            label = "Tunjangan Kinerja",
+            onClick = onClickTunkin
+        )
+
+        QuickMenuItem(
+            icon = Icons.Filled.CalendarMonth,
+            label = "Jadwal Dinas",
+            onClick = onClickSchedule
+        )
+
+        QuickMenuItem(
+            icon = Icons.Filled.AssignmentTurnedIn, // ✅ Riwayat Apel
+            label = "Riwayat Apel",
+            onClick = onClickApel
+        )
     }
 }
 
-@Composable
-private fun QuickItem(label: String, onClick: () -> Unit) {
-    TextButton(onClick = onClick) {
-        Text(label, color = Color.White, fontWeight = FontWeight.SemiBold)
-    }
-}
 
 @Composable
-private fun AnnouncementCard(title: String, body: String, date: String) {
-    Card(
-        modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp)
+private fun QuickMenuItem(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(
-            Modifier.background(BlueCard).padding(16.dp)
+        Surface(
+            shape = CircleShape,
+            color = Color.White.copy(alpha = 0.15f),
+            modifier = Modifier.size(44.dp)
         ) {
-            Column {
-                Text(title, color = Color.White, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(10.dp))
-                Text(body, color = Color.White.copy(alpha = 0.92f))
-                Spacer(Modifier.height(10.dp))
-                Text(date, color = Color.White.copy(alpha = 0.92f))
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+        }
+
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = label,
+            color = Color.White,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+}
+
+
+
+
+@Composable
+private fun AnnouncementCard(
+    announcements: List<DashboardAnnouncementUi>,
+    onViewAll: () -> Unit,
+    onOpenDetail: (DashboardAnnouncementUi) -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column {
+            // ===== Header =====
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Notifications,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "Pengumuman",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+                TextButton(onClick = onViewAll) { Text("Lihat Semua") }
             }
 
-            // ornament icon “besar samar” seperti screenshot
-            Icon(
-                Icons.Default.Notifications,
-                contentDescription = null,
-                tint = Color.White.copy(alpha = 0.18f),
-                modifier = Modifier.align(Alignment.TopStart).size(44.dp)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+            if (announcements.isEmpty()) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    Text("-", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                return@Column
+            }
+
+            // ===== Items =====
+            val shown = announcements.take(3)
+
+            shown.forEachIndexed { idx, a ->
+                // item background PUTIH
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onOpenDetail(a) },
+                    color = Color.White
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = a.title,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = a.dateLabel,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            if (a.body.isNotBlank()) {
+                                Text(
+                                    text = a.body,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.width(12.dp))
+                        ScopeBadge(scope = a.scope)
+                    }
+                }
+
+                if (idx != shown.lastIndex) {
+                    HorizontalDivider(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun ScopeBadge(scope: String) {
+    val label = scope.trim().uppercase().let {
+        when (it) {
+            "GLOBAL" -> "GLOBAL"
+            "SATKER" -> "SATKER"
+            else -> it.ifBlank { "-" }
+        }
+    }
+
+    val colors = when (label) {
+        "GLOBAL" -> AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            labelColor = MaterialTheme.colorScheme.onPrimaryContainer
+        )
+
+        "SATKER" -> AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            labelColor = MaterialTheme.colorScheme.onSecondaryContainer
+        )
+
+        else -> AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+
+    AssistChip(
+        onClick = {}, // tidak perlu aksi
+        label = { Text(label) },
+        colors = colors
+    )
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AnnouncementDetailSheet(
+    item: DashboardAnnouncementUi,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        dragHandle = { BottomSheetDefaults.DragHandle() }
+    ) {
+        val scroll = rememberScrollState()
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 16.dp)
+        ) {
+            // Title row + badge
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = item.title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(Modifier.width(10.dp))
+                ScopeBadge(scope = item.scope)
+            }
+
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = item.dateLabel,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Icon(
-                Icons.Default.People,
-                contentDescription = null,
-                tint = Color.White.copy(alpha = 0.18f),
-                modifier = Modifier.align(Alignment.TopEnd).size(44.dp)
-            )
+
+            Spacer(Modifier.height(12.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(Modifier.height(12.dp))
+
+            // Body scrollable (biar panjang pun enak)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 120.dp, max = 420.dp)
+                    .verticalScroll(scroll)
+            ) {
+                Text(
+                    text = item.body.ifBlank { "-" },
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Tutup")
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun ScheduleCard(
+    items: List<DashboardDutyUi>,
+    onOpenDetail: (DashboardDutyUi) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            Modifier
+                .background(BlueCard2)
+                .padding(16.dp)
+        ) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Jadwal Dinas", color = Color.White, fontWeight = FontWeight.Bold)
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            if (items.isEmpty()) {
+                Text(
+                    "Tidak ada jadwal dinas dalam 2 bulan ke depan.",
+                    color = Color.White.copy(alpha = 0.9f)
+                )
+                return@Column
+            }
+
+            items.forEachIndexed { idx, itx ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { onOpenDetail(itx) }
+                        .padding(vertical = 10.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                itx.line1,
+                                color = Color.White,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            ScheduleTypeBadge(type = itx.scheduleType)
+                        }
+
+                        if (!itx.line2.isNullOrBlank()) {
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                itx.line2!!,
+                                color = Color.White.copy(alpha = 0.85f),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
+
+                if (idx != items.lastIndex) {
+                    Divider(color = Color.White.copy(alpha = 0.10f))
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun ScheduleCard(body: String) {
-    Card(
-        modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp)
+private fun ScheduleTypeBadge(type: String) {
+    val t = type.trim().uppercase()
+    val (bg, fg, label) = when (t) {
+        "REGULAR" -> Triple(Color.White.copy(alpha = 0.18f), Color.White, "REGULAR")
+        "SHIFT" -> Triple(Color(0xFF1E88E5).copy(alpha = 0.35f), Color.White, "SHIFT")
+        "ON_CALL", "ONCALL" -> Triple(Color(0xFFFB8C00).copy(alpha = 0.35f), Color.White, "ON_CALL")
+        "SPECIAL" -> Triple(Color(0xFF8E24AA).copy(alpha = 0.35f), Color.White, "SPECIAL")
+        else -> Triple(Color.White.copy(alpha = 0.18f), Color.White, t.take(6))
+    }
+
+    Surface(
+        shape = RoundedCornerShape(999.dp),
+        color = bg
     ) {
-        Box(
-            Modifier.background(BlueCard2).padding(16.dp)
+        Text(
+            text = label,
+            color = fg,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DutyDetailSheet(
+    item: DashboardDutyUi,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        dragHandle = { BottomSheetDefaults.DragHandle() }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 18.dp)
         ) {
-            Column {
-                Text("Jadwal Dinas", color = Color.White, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(8.dp))
-                Text(body, color = Color.White.copy(alpha = 0.9f))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = item.title?.takeIf { it.isNotBlank() } ?: "Jadwal Dinas",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(Modifier.width(10.dp))
+                ScheduleTypeBadge(type = item.scheduleType)
             }
+
+            Spacer(Modifier.height(10.dp))
+
+            Text(item.line1, fontWeight = FontWeight.SemiBold)
+            if (!item.line2.isNullOrBlank()) {
+                Spacer(Modifier.height(4.dp))
+                Text(item.line2!!, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+
+            if (!item.note.isNullOrBlank()) {
+                Spacer(Modifier.height(12.dp))
+                Text("Catatan", fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(6.dp))
+                Text(item.note!!)
+            }
+
+            Spacer(Modifier.height(16.dp))
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            ) { Text("Tutup") }
         }
     }
 }

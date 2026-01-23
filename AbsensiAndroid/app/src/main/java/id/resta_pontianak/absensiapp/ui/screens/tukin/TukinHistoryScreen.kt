@@ -28,15 +28,19 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import id.resta_pontianak.absensiapp.data.network.TukinDayDto
+import id.resta_pontianak.absensiapp.ui.helper.SetStatusBar
+import id.resta_pontianak.absensiapp.ui.screens.dashboard.BlueHeader
 import kotlinx.datetime.TimeZone
 import java.text.NumberFormat
 import java.time.LocalDate
@@ -83,7 +87,7 @@ fun TukinHistoryScreen(
     val calc = s.calc
     val rawDays = calc?.breakdown?.days ?: emptyList()
     val days = remember(rawDays, tz) { filterUpToTodayAndExcludeHolidays(rawDays, tz) }
-
+    SetStatusBar(BlueHeader, false)
     Scaffold(
         topBar = {
             TopAppBar(
@@ -92,7 +96,13 @@ fun TukinHistoryScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = BlueHeader,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White,
+                    actionIconContentColor = Color.White
+                )
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }

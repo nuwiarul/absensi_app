@@ -28,6 +28,7 @@ import id.resta_pontianak.absensiapp.ui.screens.dashboard.AttendanceAction
 import id.resta_pontianak.absensiapp.ui.screens.dashboard.DashboardRoute
 import java.net.URLDecoder
 import android.widget.Toast
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.platform.LocalContext
@@ -66,6 +67,7 @@ import id.resta_pontianak.absensiapp.ui.screens.profile.ProfileRoute
 import id.resta_pontianak.absensiapp.ui.screens.tukin.TukinHistoryRoute
 import java.time.YearMonth
 import id.resta_pontianak.absensiapp.ui.badges.LeaveBadgeViewModel
+import id.resta_pontianak.absensiapp.ui.screens.announcement.AnnouncementsRoute
 
 private val BottomNavBlue = Color(0xFF0B2A5A)
 
@@ -177,7 +179,8 @@ fun AppNav(
                     }
                 )
             }
-        }
+        },
+        contentWindowInsets = WindowInsets(0),
     ) { innerPadding ->
 
         NavHost(
@@ -220,6 +223,9 @@ fun AppNav(
                     },
                     onIjin = {
                         navController.navigate(Routes.Leave)
+                    },
+                    onAnnouncements = {
+                        navController.navigate(Routes.Announcements)
                     }
 
                 )
@@ -231,6 +237,12 @@ fun AppNav(
 
             composable(Routes.Leave) {
                 LeaveRoute(onBack = { navController.popBackStack() })
+            }
+
+            composable(Routes.Announcements) {
+                AnnouncementsRoute(
+                    onBack = { navController.popBackStack() }
+                )
             }
 
             composable(
@@ -435,8 +447,8 @@ private fun BottomBar(
 
     val items = listOf(
         Triple(Routes.Dashboard, "Dashboard", Icons.Filled.Dashboard),
-        Triple(Routes.AttendanceHistory, "Hadir", Icons.Filled.EventAvailable),
-        Triple(Routes.Leave, "Ijin", Icons.Filled.Description),
+        Triple(Routes.AttendanceHistory, "Kehadiran", Icons.Filled.EventAvailable),
+        Triple(Routes.Leave, "Perijinan", Icons.Filled.Description),
         Triple(Routes.Account, "Akun", Icons.Filled.AccountCircle),
     )
 
@@ -530,6 +542,7 @@ private fun isBottomBarVisible(route: String?): Boolean {
     if (route in setOf(
             Routes.Profile, // Informasi Profil
             Routes.DutySchedules, // Jadwal Dinas
+            Routes.Announcements,
             // nanti bisa tambah: Routes.ChangePasswordScreen, dll,
         )
     ) return false

@@ -27,4 +27,6 @@ object Routes {
     const val TukinHistory = "tukin_history"
 
     const val DutySchedules = "duty_schedules"
+
+    const val Announcements = "announcements"
 }

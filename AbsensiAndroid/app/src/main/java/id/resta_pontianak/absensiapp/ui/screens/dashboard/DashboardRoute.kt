@@ -24,6 +24,7 @@ fun DashboardRoute(
     onGoSchedule: () -> Unit,
     onRiwayatAbsen: () -> Unit,
     onIjin: () -> Unit,
+    onAnnouncements: () -> Unit,
     onGoAttendance: (type: AttendanceAction) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -58,6 +59,9 @@ fun DashboardRoute(
         checkOutTime = s.checkOutTime,
         checkInSubtitle = s.checkInSubtitle,
         checkOutSubtitle = s.checkOutSubtitle,
+        announcements =  s.announcements,
+        onViewAllAnnouncements = onAnnouncements,
+        dutyUpcoming = s.dutyUpcoming,
         announcementTitle = "Pengumuman!",
         announcementBody = "-",
         announcementDate = "Senin, 29 Des 2025",
@@ -68,6 +72,7 @@ fun DashboardRoute(
         onClickSchedule = onGoSchedule,
         onClickIjin = onIjin,
         onClickRiwayatAbsen = onRiwayatAbsen,
+
         onLogoutClick = {
             scope.launch {
                 Log.d("OnLogout", "logout clicked")

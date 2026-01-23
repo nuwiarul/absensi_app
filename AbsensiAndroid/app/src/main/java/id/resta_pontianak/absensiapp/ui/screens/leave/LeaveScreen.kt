@@ -1,5 +1,6 @@
 package id.resta_pontianak.absensiapp.ui.screens.leave
 
+import android.app.Activity
 import android.app.DatePickerDialog
 import android.content.Context
 import androidx.compose.foundation.layout.*
@@ -23,7 +24,14 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MenuAnchorType // Penting untuk versi terbaru
 import androidx.compose.foundation.layout.Row
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowInsetsControllerCompat
+import id.resta_pontianak.absensiapp.ui.helper.SetStatusBar
+import id.resta_pontianak.absensiapp.ui.screens.dashboard.BlueHeader
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,6 +72,8 @@ fun LeaveScreen(
         }
     }
 
+    SetStatusBar(BlueHeader, false)
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
@@ -74,15 +84,23 @@ fun LeaveScreen(
                 },
                 actions = {
                     if (state.role != "SATKER_HEAD") {
-                        Button(
+                        OutlinedButton(
                             onClick = onOpenCreate,
-                            enabled = !state.loading
+                            enabled = !state.loading,
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.6f)),
                         ) { Text("Buat Ijin") }
                     } else {
-                        TextButton(onClick = onReload, enabled = !state.loading) { Text("Refresh") }
+                        TextButton(onClick = onReload, enabled = !state.loading) { Text("Refresh", color = Color.White) }
                     }
                 },
-                windowInsets = WindowInsets(0, 0, 0, 0) // opsional: bikin lebih rapat ke atas
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = BlueHeader,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White,
+                    actionIconContentColor = Color.White
+                )
+                //windowInsets = WindowInsets(0, 0, 0, 0) // opsional: bikin lebih rapat ke atas
             )
         }
     ) { padding ->

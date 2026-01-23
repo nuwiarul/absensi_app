@@ -74,6 +74,8 @@ class AccountViewModel @Inject constructor(
 
         val hadirHari: Int = 0,
         val tidakHadirHari: Int = 0,
+        val ijinHari: Int = 0,
+        val jadwalDinasHari: Int = 0,
         val tunkinNominal: String = "0",
         val tunkinUpdatedAtText: String? = null,
         val isTunkinStale: Boolean = false,
@@ -165,7 +167,7 @@ class AccountViewModel @Inject constructor(
 
     private fun isInvalidWithoutLeave(type: String?): Boolean {
         val t = type?.trim()?.uppercase()
-        return t == "DINAS_LUAR" || t == "CUTI" || t == "IJIN" || t == "SAKIT"
+        return t == "DINAS_LUAR" || t == "CUTI" || t == "IJIN"
     }
 
     private fun isWfaWfh(type: String?): Boolean {
@@ -176,7 +178,7 @@ class AccountViewModel @Inject constructor(
     private suspend fun refreshMonthlyAttendanceStats() {
         try {
             val profile = tokenStore.getProfile() ?: run {
-                _state.value = _state.value.copy(hadirHari = 0, tidakHadirHari = 0)
+                _state.value = _state.value.copy(hadirHari = 0, tidakHadirHari = 0, ijinHari = 0, jadwalDinasHari = 0)
                 return
             }
 
@@ -234,6 +236,8 @@ class AccountViewModel @Inject constructor(
             // ===================== COUNT =====================
             var hadir = 0
             var tidakHadir = 0
+            var ijin = 0
+            var jadwalDinas = 0
 
             var d = fromDate
             while (d <= today) {
@@ -250,9 +254,9 @@ class AccountViewModel @Inject constructor(
                     continue
                 }
 
-                // RULE: leave-request dulu => hadir
+                // RULE: leave-request dulu => masuk ke card IJIN
                 if (lr != null) {
-                    hadir++
+                    ijin++
                     d = d.plus(DatePeriod(days = 1))
                     continue
                 }
@@ -260,32 +264,37 @@ class AccountViewModel @Inject constructor(
                 val hasCheckIn = !sess?.checkInAt.isNullOrBlank()
 
                 // RULE: duty schedule
+                // - kalau ada check-in => masuk ke card JADWAL DINAS
+                // - kalau tidak ada check-in => TIDAK HADIR
                 if (hasDuty) {
-                    if (hasCheckIn) hadir++ else tidakHadir++
+                    if (hasCheckIn) jadwalDinas++ else tidakHadir++
                     d = d.plus(DatePeriod(days = 1))
                     continue
                 }
 
                 // RULE: attendance_leave_type
-                val attIn = sess?.checkInLeaveType
-                val attOut = sess?.checkOutLeaveType
-                val invalid = isInvalidWithoutLeave(attIn) || isInvalidWithoutLeave(attOut)
+val attIn = sess?.checkInLeaveType
+val attOut = sess?.checkOutLeaveType
 
-                if (invalid) {
-                    // DINAS_LUAR/CUTI/IJIN/SAKIT tanpa leave-approved => tidak hadir
-                    tidakHadir++
-                    d = d.plus(DatePeriod(days = 1))
-                    continue
-                }
+// WFA/WFH: perlakukan seperti normal hadir/tidak hadir berdasarkan ada check-in
+val wfaWfh = isWfaWfh(attIn) || isWfaWfh(attOut)
+if (wfaWfh) {
+    if (hasCheckIn) hadir++ else tidakHadir++
+    d = d.plus(DatePeriod(days = 1))
+    continue
+}
 
-                val wfaWfh = isWfaWfh(attIn) || isWfaWfh(attOut)
-                if (wfaWfh) {
-                    if (hasCheckIn) hadir++ else tidakHadir++
-                    d = d.plus(DatePeriod(days = 1))
-                    continue
-                }
+// SAKIT/DINAS_LUAR/CUTI/IJIN: hanya dianggap sah jika ada leave-request APPROVED pada tanggal tsb.
+// Rule kamu: cek ini hanya ketika ada check-in.
+val invalidType = isInvalidWithoutLeave(attIn) || isInvalidWithoutLeave(attOut)
+if (hasCheckIn && invalidType) {
+    // lr sudah diproses di atas; jika sampai sini berarti tidak ada leave-approved => tidak hadir
+    tidakHadir++
+    d = d.plus(DatePeriod(days = 1))
+    continue
+}
 
-                // RULE: normal workday
+// RULE: normal workday
                 if (hasCheckIn) hadir++ else tidakHadir++
 
                 d = d.plus(DatePeriod(days = 1))
@@ -293,11 +302,13 @@ class AccountViewModel @Inject constructor(
 
             _state.value = _state.value.copy(
                 hadirHari = hadir,
-                tidakHadirHari = tidakHadir
+                tidakHadirHari = tidakHadir,
+                ijinHari = ijin,
+                jadwalDinasHari = jadwalDinas
             )
         } catch (_: Throwable) {
             // kalau error jaringan dsb, jangan bikin crash. biarkan nilai lama / set 0
-            _state.value = _state.value.copy(hadirHari = 0, tidakHadirHari = 0)
+            _state.value = _state.value.copy(hadirHari = 0, tidakHadirHari = 0, ijinHari = 0, jadwalDinasHari = 0)
         }
     }
 

@@ -38,10 +38,15 @@ import androidx.compose.material3.CircularProgressIndicator // ✅ ADD
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.foundation.lazy.LazyColumn // ✅ ADD
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.filled.AssignmentTurnedIn
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.unit.sp
+import id.resta_pontianak.absensiapp.ui.helper.SetStatusBar
+import id.resta_pontianak.absensiapp.ui.screens.dashboard.BlueHeader
 
-private val BlueHeader = Color(0xFF0B2A5A)
+//private val BlueHeader = Color(0xFF0B2A5A)
 private val CardBlue = Color(0xFF123D8A)
 private val CardBlueDim = Color(0xFF0F2F68)
 
@@ -51,6 +56,8 @@ fun AccountScreen(
     nrp: String,
     hadirHari: Int,
     tidakHadirHari: Int,
+    ijinHari: Int,
+    jadwalDinasHari: Int,
     tunkinNominal: String,
     tunkinUpdatedAtText: String?,
     isTunkinStale: Boolean,
@@ -71,6 +78,7 @@ fun AccountScreen(
     onChangePassword: () -> Unit,
     leaveSubmittedBadgeCount: Int = 0,
 ) {
+    SetStatusBar(BlueHeader, false)
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -81,6 +89,8 @@ fun AccountScreen(
             nrp = nrp,
             hadirHari = hadirHari,
             tidakHadirHari = tidakHadirHari,
+            ijinHari = ijinHari,
+            jadwalDinasHari = jadwalDinasHari,
             tunkinNominal = tunkinNominal,
             tunkinUpdatedAtText = tunkinUpdatedAtText,
             isTunkinStale = isTunkinStale,
@@ -104,13 +114,29 @@ fun AccountScreen(
         ) {
             item { MenuRow("Informasi Profil", Icons.Filled.Person, onInformasiProfil) }
 
-            item { MenuRow("Riwayat Perizinan", Icons.Filled.ReceiptLong, onRiwayatPerizinan, badgeCount = leaveSubmittedBadgeCount) }
+            item {
+                MenuRow(
+                    "Perizinan",
+                    Icons.Filled.Description,
+                    onRiwayatPerizinan,
+                    badgeCount = leaveSubmittedBadgeCount
+                )
+            }
 
-            item { MenuRow("Riwayat Kehadiran", Icons.Filled.Schedule, onRiwayatKehadiran) }
+            item { MenuRow("Kehadiran", Icons.Filled.EventAvailable, onRiwayatKehadiran) }
 
-            item { MenuRow("Riwayat Tunjangan Kinerja", Icons.Filled.Payments, onRiwayatTunkin) }
+            item { MenuRow("Tunjangan Kinerja", Icons.Filled.Payments, onRiwayatTunkin) }
 
-            item { MenuRow("Jadwal Dinas", Icons.Filled.CalendarMonth, onJadwalDinas, badgeCount = pendingDutySubmittedCount) }
+            item {
+                MenuRow(
+                    "Jadwal Dinas",
+                    Icons.Filled.CalendarMonth,
+                    onJadwalDinas,
+                    badgeCount = pendingDutySubmittedCount
+                )
+            }
+
+            item { MenuRow("Riwayat Apel", Icons.Filled.AssignmentTurnedIn, onRiwayatTunkin) }
 
             item { MenuRow("Change Password", Icons.Filled.Lock, onChangePassword) }
 
@@ -126,6 +152,8 @@ private fun AccountHeader(
     profilePhotoKey: String?,
     hadirHari: Int,
     tidakHadirHari: Int,
+    ijinHari: Int,
+    jadwalDinasHari: Int,
     tunkinNominal: String,
     tunkinUpdatedAtText: String?,
     isTunkinStale: Boolean,
@@ -137,130 +165,176 @@ private fun AccountHeader(
     isUploading: Boolean
 
 ) {
-    Column(
-        modifier = Modifier
+    Box(
+        Modifier
             .fillMaxWidth()
             .background(BlueHeader)
-            .padding(top = 20.dp, bottom = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .statusBarsPadding()
+            .padding(
+                end = 16.dp,
+                bottom = 16.dp,
+            )
     ) {
-
-
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        )  {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // ✅ CHANGE: avatar + tombol kecil ubah foto
-                Box(
-                    modifier = Modifier.size(110.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (!profilePhotoKey.isNullOrBlank()) {
-                        AsyncImage(
-                            model = profileUrl(profilePhotoKey),
-                            imageLoader = imageLoader,
-                            contentDescription = "Foto Profil",
-                            modifier = Modifier
-                                .size(96.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.15f), CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Image(
-                            painter = painterResource(id = R.drawable.logo_pontianak),
-                            contentDescription = "Foto Profil",
-                            modifier = Modifier
-                                .size(96.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.15f), CircleShape)
-                                .padding(10.dp),
-                            contentScale = ContentScale.Fit
-                        )
-                    }
-
-                    // ✅ ADD: loading kecil saat upload
-                    if (isUploading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(28.dp),
-                            strokeWidth = 3.dp,
-                            color = Color.White
-                        )
-                    }
-
-                    // ✅ ADD: tombol kecil ubah foto (pojok kanan bawah)
-                    Surface(
-                        shape = CircleShape,
-                        color = Color.White,
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .size(34.dp)
-                            .clickable(enabled = !isUploading) { onClickChangePhoto() }
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Filled.PhotoCamera,
-                                contentDescription = "Ubah Foto Profil",
-                                tint = BlueHeader,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-                }
-
-
-
-                Spacer(Modifier.height(10.dp))
-
-                Text(
-                    text = fullName,
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-
-                Spacer(Modifier.height(4.dp))
-
-                Text(
-                    text = nrp,
-                    color = Color.White.copy(alpha = 0.75f),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-
-            Spacer(Modifier.width(14.dp))
-
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                StatCard(Modifier.fillMaxWidth(), "${hadirHari} Hari", "Hadir", CardBlueDim)
-                StatCard(Modifier.fillMaxWidth(), "${tidakHadirHari} Hari", "Tidak Hadir", CardBlueDim)
-            }
-        }
-
-
-
-
-        Spacer(Modifier.height(12.dp))
-
-        /*Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                .background(BlueHeader),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
 
-            *//*TukinStatCard(
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // ✅ CHANGE: avatar + tombol kecil ubah foto
+                    Box(
+                        modifier = Modifier.size(110.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (!profilePhotoKey.isNullOrBlank()) {
+                            AsyncImage(
+                                model = profileUrl(profilePhotoKey),
+                                imageLoader = imageLoader,
+                                contentDescription = "Foto Profil",
+                                modifier = Modifier
+                                    .size(96.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White.copy(alpha = 0.15f), CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Image(
+                                painter = painterResource(id = R.drawable.logo_pontianak),
+                                contentDescription = "Foto Profil",
+                                modifier = Modifier
+                                    .size(96.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White.copy(alpha = 0.15f), CircleShape)
+                                    .padding(10.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                        }
+
+                        // ✅ ADD: loading kecil saat upload
+                        if (isUploading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(28.dp),
+                                strokeWidth = 3.dp,
+                                color = Color.White
+                            )
+                        }
+
+                        // ✅ ADD: tombol kecil ubah foto (pojok kanan bawah)
+                        Surface(
+                            shape = CircleShape,
+                            color = Color.White,
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .size(34.dp)
+                                .clickable(enabled = !isUploading) { onClickChangePhoto() }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Filled.PhotoCamera,
+                                    contentDescription = "Ubah Foto Profil",
+                                    tint = BlueHeader,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+
+
+
+                    Spacer(Modifier.height(10.dp))
+
+                    Text(
+                        text = fullName,
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+
+                    Spacer(Modifier.height(4.dp))
+
+                    Text(
+                        text = nrp,
+                        color = Color.White.copy(alpha = 0.75f),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+                Spacer(Modifier.width(14.dp))
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        StatCard(
+                            modifier = Modifier.weight(1f),
+                            value = "${hadirHari} Hari",
+                            label = "Hadir",
+                            container = CardBlueDim,
+                            heightDp = 64
+                        )
+                        StatCard(
+                            modifier = Modifier.weight(1f),
+                            value = "${tidakHadirHari} Hari",
+                            label = "Tidak Hadir",
+                            container = CardBlueDim,
+                            heightDp = 64
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        StatCard(
+                            modifier = Modifier.weight(1f),
+                            value = "${ijinHari} Hari",
+                            label = "Ijin",
+                            container = CardBlueDim,
+                            heightDp = 64
+                        )
+                        StatCard(
+                            modifier = Modifier.weight(1f),
+                            value = "${jadwalDinasHari} Hari",
+                            label = "Dinas/Piket",
+                            container = CardBlueDim,
+                            heightDp = 64
+                        )
+                    }
+                }
+            }
+
+
+
+
+            Spacer(Modifier.height(12.dp))
+
+            /*Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+
+
+                *//*TukinStatCard(
                 modifier = Modifier.weight(1f),
                 nominal = tunkinNominal,
                 updatedAtText = tunkinUpdatedAtText,
@@ -271,20 +345,21 @@ private fun AccountHeader(
             //StatCard(Modifier.weight(1f), tunkinNominal, "Tunkin", CardBlue)
         }*/
 
-        TukinWideCard(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            nominal = tunkinNominal,
-            updatedAtText = tunkinUpdatedAtText,
-            isStale = isTunkinStale,
-            isLoading = isTunkinLoading,
-            onRefresh = onRefreshTunkin
-        )
+            TukinWideCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                nominal = tunkinNominal,
+                updatedAtText = tunkinUpdatedAtText,
+                isStale = isTunkinStale,
+                isLoading = isTunkinLoading,
+                onRefresh = onRefreshTunkin
+            )
+        }
     }
 }
 
-@Composable
+/*@Composable
 private fun TukinStatCard(
     modifier: Modifier,
     nominal: String,
@@ -294,7 +369,7 @@ private fun TukinStatCard(
     onRefresh: () -> Unit
 ) {
     Card(
-        modifier = modifier.height(78.dp),
+        modifier = modifier.height(heightDp.dp),
         shape = RoundedCornerShape(14.dp)
     ) {
         Column(
@@ -366,7 +441,7 @@ private fun TukinStatCard(
             }
         }
     }
-}
+}*/
 
 @Composable
 private fun TukinWideCard(
@@ -439,16 +514,16 @@ private fun TukinWideCard(
 }
 
 
-
 @Composable
 private fun StatCard(
     modifier: Modifier,
     value: String,
     label: String,
-    container: Color
+    container: Color,
+    heightDp: Int = 78
 ) {
     Card(
-        modifier = modifier.height(78.dp),
+        modifier = modifier.height(heightDp.dp),
         shape = RoundedCornerShape(14.dp)
     ) {
         Box(

@@ -126,6 +126,8 @@ fun AccountRoute(
             nrp = s.nrp,
             hadirHari = s.hadirHari,
             tidakHadirHari = s.tidakHadirHari,
+            ijinHari = s.ijinHari,
+            jadwalDinasHari = s.jadwalDinasHari,
             tunkinNominal = s.tunkinNominal,
             tunkinUpdatedAtText = s.tunkinUpdatedAtText,
             isTunkinStale = s.isTunkinStale,
