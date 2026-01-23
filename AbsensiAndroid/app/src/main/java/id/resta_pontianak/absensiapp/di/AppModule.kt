@@ -11,6 +11,7 @@ import dagger.hilt.components.SingletonComponent
 import id.resta_pontianak.absensiapp.data.local.DeviceIdProvider
 import id.resta_pontianak.absensiapp.data.local.SettingsStore
 import id.resta_pontianak.absensiapp.data.local.TokenStore
+import id.resta_pontianak.absensiapp.data.local.TukinStore
 import id.resta_pontianak.absensiapp.data.network.ApiService
 import id.resta_pontianak.absensiapp.data.network.AuthInterceptor
 import id.resta_pontianak.absensiapp.data.network.ClientChannelInterceptor
@@ -158,5 +159,9 @@ object AppModule {
     @Singleton
     fun provideDutyScheduleRepository(api: ApiService, tokenStore: TokenStore): DutyScheduleRepository =
         DutyScheduleRepository(api, tokenStore)
+
+    @Provides
+    @Singleton
+    fun provideTukinStore(@ApplicationContext ctx: Context): TukinStore = TukinStore(ctx)
 
 }

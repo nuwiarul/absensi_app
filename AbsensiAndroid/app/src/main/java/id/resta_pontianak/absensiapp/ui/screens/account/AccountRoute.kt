@@ -127,6 +127,10 @@ fun AccountRoute(
             hadirHari = s.hadirHari,
             tidakHadirHari = s.tidakHadirHari,
             tunkinNominal = s.tunkinNominal,
+            tunkinUpdatedAtText = s.tunkinUpdatedAtText,
+            isTunkinStale = s.isTunkinStale,
+            isTunkinLoading = s.isTunkinLoading,
+            onRefreshTunkin = { vm.onRefreshTukinManual() },
 
             profileUrl = vm::profileUrl,
             imageLoader = vm.imageLoader,
