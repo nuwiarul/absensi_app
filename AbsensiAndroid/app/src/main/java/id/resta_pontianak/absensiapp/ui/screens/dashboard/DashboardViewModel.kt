@@ -44,10 +44,19 @@ data class DashboardUiState(
     val nrp: String = "-",
 
     val workDateText: String? = null,
-    val checkInTime: String = "--:--",
-    val checkOutTime: String = "--:--",
-    val checkInSubtitle: String = "Lokasi",
-    val checkOutSubtitle: String = "Lokasi",
+
+    val checkInDateText: String? = null,
+    val checkInTimeText: String = "--:--",
+    val checkOutDateText: String? = null,
+    val checkOutTimeText: String = "--:--",
+
+    val checkInEnabled: Boolean = true,
+    val checkOutEnabled: Boolean = false,
+
+    val isDuty: Boolean = false,
+    val dutyStartText: String? = null,
+    val dutyEndText: String? = null,
+
 
     val announcements: List<DashboardAnnouncementUi> = emptyList(),
     val dutyUpcoming: List<DashboardDutyUi> = emptyList(),
@@ -76,11 +85,12 @@ class DashboardViewModel @Inject constructor(
                 val profile = tokenStore.getProfile()
                     ?: error("Profile tidak ditemukan, silakan login ulang")
 
-                val resp = api.getAttendanceToday()
-                val ui = mapToDashboardAttendanceUi(resp.data)
 
                 val tzName = settingsRepository.getTimezoneCached()
                 val zone = runCatching { ZoneId.of(tzName) }.getOrElse { ZoneId.of("Asia/Jakarta") }
+
+                val resp = api.getAttendanceSessionToday()
+                val ui = resp.data.toDashboardAttendanceUiSafe(zone)
 
                 // pengumuman (visible): ambil 3 terbaru
                 val announcements = try {
@@ -133,10 +143,15 @@ class DashboardViewModel @Inject constructor(
                         nrp = profile.nrp ?: "-",
 
                         workDateText = ui.headerDateText,
-                        checkInTime = ui.checkInTime,
-                        checkOutTime = ui.checkOutTime,
-                        checkInSubtitle = ui.checkInSubtitle,
-                        checkOutSubtitle = ui.checkOutSubtitle,
+                        checkInDateText = ui.checkInDateText,
+                        checkInTimeText = ui.checkInTimeText,
+                        checkOutDateText = ui.checkOutDateText,
+                        checkOutTimeText = ui.checkOutTimeText,
+                        checkInEnabled = ui.checkInEnabled,
+                        checkOutEnabled = ui.checkOutEnabled,
+                        isDuty = ui.isDuty,
+                        dutyStartText = ui.dutyStartText,
+                        dutyEndText = ui.dutyEndText,
                         announcements = announcements,
                         dutyUpcoming = dutyUpcoming
                     )

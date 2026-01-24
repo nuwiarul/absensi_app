@@ -36,6 +36,9 @@ data class SharedAttendanceState(
 
     val leaveType: LeaveType = LeaveType.NORMAL,
     val leaveNotes: String? = null,
+
+    // ✅ apel (opsional) - jika true akan dikirim ke backend
+    val apel: Boolean? = null,
 )
 
 @HiltViewModel
@@ -77,6 +80,10 @@ class SharedAttendanceViewModel @Inject constructor(
 
     fun setLeave(type: LeaveType, notes: String?) {
         _state.update { it.copy(leaveType = type, leaveNotes = notes) }
+    }
+
+    fun setApel(apel: Boolean?) {
+        _state.update { it.copy(apel = apel) }
     }
 
     fun requestRefreshLocation() {
@@ -133,7 +140,10 @@ class SharedAttendanceViewModel @Inject constructor(
             location_age_ms = s.locationAgeMs,
             // ✅ leave
             leave_type = s.leaveType.name,     // "NORMAL" / "DINAS_LUAR" / dst
-            leave_notes = s.leaveNotes
+            leave_notes = s.leaveNotes,
+
+            // ✅ apel
+            apel = s.apel
         )
 
         try {

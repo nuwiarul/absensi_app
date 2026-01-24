@@ -79,6 +79,13 @@ pub trait LeaveRequestRepo {
         from: NaiveDate,
         to: NaiveDate,
     ) -> Result<Vec<LeaveRequestDto>, Error>;
+
+    /// True if user has an APPROVED leave request covering the given date.
+    async fn has_approved_leave_on_date(
+        &self,
+        user_id: Uuid,
+        date: NaiveDate,
+    ) -> Result<bool, Error>;
 }
 
 #[async_trait]
@@ -515,5 +522,29 @@ impl LeaveRequestRepo for DBClient {
             .await?;
 
         Ok(rows)
+    }
+
+    async fn has_approved_leave_on_date(
+        &self,
+        user_id: Uuid,
+        date: NaiveDate,
+    ) -> Result<bool, Error> {
+        let row = sqlx::query!(
+            r#"
+            SELECT 1 as one
+            FROM leave_requests
+            WHERE user_id = $1
+              AND status = 'APPROVED'
+              AND start_date <= $2
+              AND end_date >= $2
+            LIMIT 1
+            "#,
+            user_id,
+            date
+        )
+            .fetch_optional(&self.pool)
+            .await?;
+
+        Ok(row.is_some())
     }
 }

@@ -5,6 +5,14 @@ use chrono::{DateTime, NaiveDate, Utc};
 use sqlx::Error;
 use uuid::Uuid;
 
+#[derive(Debug, Clone)]
+pub struct AttendanceSessionSummary {
+    pub id: Uuid,
+    pub work_date: NaiveDate,
+    pub check_in_at: Option<DateTime<Utc>>,
+    pub check_out_at: Option<DateTime<Utc>>,
+}
+
 #[async_trait]
 pub trait AttendanceSessionRepo {
     async fn upsert_attendance_session(
@@ -47,6 +55,13 @@ pub trait AttendanceSessionRepo {
         user_id: Uuid,
         work_date: NaiveDate,
     ) -> Result<u64, Error>;
+
+    /// Find a session by (user_id, work_date). Returns None when not found.
+    async fn find_attendance_session_by_user_date(
+        &self,
+        user_id: Uuid,
+        work_date: NaiveDate,
+    ) -> Result<Option<AttendanceSessionSummary>, Error>;
 }
 
 #[async_trait]
@@ -186,5 +201,27 @@ impl AttendanceSessionRepo for DBClient {
             .await?;
 
         Ok(res.rows_affected())
+    }
+
+    async fn find_attendance_session_by_user_date(
+        &self,
+        user_id: Uuid,
+        work_date: NaiveDate,
+    ) -> Result<Option<AttendanceSessionSummary>, Error> {
+        let row = sqlx::query_as!(
+            AttendanceSessionSummary,
+            r#"
+            SELECT id, work_date, check_in_at, check_out_at
+            FROM attendance_sessions
+            WHERE user_id = $1 AND work_date = $2
+            LIMIT 1
+            "#,
+            user_id,
+            work_date
+        )
+            .fetch_optional(&self.pool)
+            .await?;
+
+        Ok(row)
     }
 }

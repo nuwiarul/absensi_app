@@ -40,5 +40,6 @@ data class AttendanceReq(
 
     // ✅ leave
     val leave_type: String?,   // contoh: "NORMAL", "DINAS_LUAR"
-    val leave_notes: String?
+    val leave_notes: String?,
+    val apel: Boolean?
 )

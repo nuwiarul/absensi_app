@@ -10,6 +10,8 @@ use crate::config::config::Config;
 use crate::db::DBClient;
 use crate::routes::create_router;
 
+// alias runwib="TZ=Asia/Jakarta faketime"
+
 mod error;
 mod utils;
 mod config;

@@ -18,6 +18,9 @@ import id.resta_pontianak.absensiapp.data.constant.LeaveType
 import id.resta_pontianak.absensiapp.ui.navigation.Routes
 import id.resta_pontianak.absensiapp.ui.screens.dashboard.AttendanceAction
 import kotlinx.coroutines.delay
+import java.time.LocalTime
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 @Composable
 fun AttendanceMapRoute(
@@ -37,6 +40,8 @@ fun AttendanceMapRoute(
     val sharedState by shared.state.collectAsState()
     val state by vm.state.collectAsState()
 
+    var showApelSheet by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+
     LaunchedEffect(sharedState.triggerRefreshLocation) {
         if (sharedState.triggerRefreshLocation) {
             vm.refreshLocation()
@@ -49,6 +54,8 @@ fun AttendanceMapRoute(
 
     LaunchedEffect(action) {
         shared.setAction(action)
+        // reset pilihan apel tiap mulai flow baru
+        shared.setApel(null)
     }
 
     // setiap lokasi update, simpan ke shared
@@ -104,6 +111,14 @@ fun AttendanceMapRoute(
         )
     }
 
+    fun shouldOfferApelNow(): Boolean {
+        // NOTE: window apel final akan di-enforce juga oleh backend.
+        // Di mobile ini hanya untuk UX (mengurangi popup).
+        val t = LocalTime.now()
+        // Default: tawarkan apel pagi (05:00 - 10:00).
+        return !t.isBefore(LocalTime.of(5, 0)) && t.isBefore(LocalTime.of(10, 0))
+    }
+
     AttendanceMapScreen(
         state = state,
         distanceText = vm.distanceText(),
@@ -114,11 +129,37 @@ fun AttendanceMapRoute(
             val inside = state.insideArea == true
             if (inside) {
                 shared.setLeave(LeaveType.NORMAL, null)
-                onContinue()
+                if (shouldOfferApelNow()) {
+                    showApelSheet = true
+                } else {
+                    shared.setApel(null)
+                    onContinue()
+                }
+                //onContinue()
             } else {
+                shared.setApel(null)
                 onContinueLeave()
             }
         },
         onBack = onCancel
     )
+
+    if (showApelSheet) {
+        ApelChoiceBottomSheet(
+            action = action,
+            onChooseApel = {
+                showApelSheet = false
+                shared.setApel(true)
+                onContinue()
+            },
+            onSkip = {
+                showApelSheet = false
+                shared.setApel(null)
+                onContinue()
+            },
+            onDismiss = {
+                showApelSheet = false
+            }
+        )
+    }
 }

@@ -89,10 +89,16 @@ fun DashboardScreen(
     nrp: String,
     satkerName: String,
     workDateText: String?,
-    checkInTime: String,
-    checkOutTime: String,
-    checkInSubtitle: String,
-    checkOutSubtitle: String,
+    checkInDateText: String?,
+    checkInTimeText: String,
+    checkOutDateText: String?,
+    checkOutTimeText: String,
+    checkInEnabled: Boolean,
+    checkOutEnabled: Boolean,
+    isDuty: Boolean,
+    dutyStartText: String?,
+    dutyEndText: String?,
+
 
     announcementTitle: String,
     announcementBody: String,
@@ -149,7 +155,7 @@ fun DashboardScreen(
             }
 
             item {
-                val hasIn = hasTime(checkInTime)
+                /*val hasIn = hasTime(checkInTime)
                 val hasOut = hasTime(checkOutTime)
 
                 val inState = if (!hasIn) AttendanceCardState.Ready else AttendanceCardState.Done
@@ -157,24 +163,32 @@ fun DashboardScreen(
                     hasOut -> AttendanceCardState.Done
                     hasIn -> AttendanceCardState.Ready
                     else -> AttendanceCardState.Locked
-                }
+                }*/
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     AttendanceCard(
                         title = "Masuk",
-                        time = checkInTime,
-                        subtitle = checkInSubtitle,
+                        dateText = checkInDateText,
+                        timeText = checkInTimeText,
+                        enabled = checkInEnabled,
+                        isDuty = isDuty,
+                        //dutyBadgeText = if (isDuty) "DUTY" else null,
+                        dutyInfoText = dutyStartText,
+                        modifier = Modifier.weight(1f),
                         onClick = onClickMasuk,
-                        modifier = Modifier.weight(1f)
                     )
                     AttendanceCard(
                         title = "Keluar",
-                        time = checkOutTime,
-                        subtitle = checkOutSubtitle,
+                        dateText = checkOutDateText,
+                        timeText = checkOutTimeText,
+                        enabled = checkOutEnabled,
+                        isDuty = isDuty,
+                        //dutyBadgeText = if (isDuty) "DUTY" else null,
+                        dutyInfoText = dutyEndText,
+                        modifier = Modifier.weight(1f),
                         onClick = onClickKeluar,
-                        modifier = Modifier.weight(1f)
                     )
                 }
             }
@@ -296,8 +310,162 @@ private fun Header(fullName: String, nrp: String, satkerName: String, onLogout: 
 
 }
 
+@Composable
+private fun AttendanceCard(
+    title: String,
+    dateText: String?,
+    timeText: String,
+    enabled: Boolean,
+    isDuty: Boolean,
+    dutyInfoText: String?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val containerColor = if (enabled) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surfaceVariant
+    val titleColor = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+
+    Card(
+        onClick = { if (enabled) onClick() },
+        enabled = enabled,
+        modifier = modifier
+            .fillMaxWidth()
+            .height(140.dp),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(title, fontWeight = FontWeight.SemiBold, color = titleColor)
+
+                if (isDuty) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(999.dp)
+                    ) {
+                        Text(
+                            text = "DUTY",
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            }
+
+            Column {
+                if (!dateText.isNullOrBlank()) {
+                    Text(
+                        dateText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Muted
+                    )
+                    Spacer(Modifier.height(2.dp))
+                }
+
+                Text(
+                    timeText,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = titleColor
+                )
+
+                Spacer(Modifier.height(6.dp))
+
+                val footer = when {
+                    isDuty && !dutyInfoText.isNullOrBlank() -> dutyInfoText
+                    else -> "Lokasi"
+                }
+                Text(footer, color = Muted, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+    }
+}
+
 
 @Composable
+private fun SmallPill(text: String) {
+    Surface(
+        shape = RoundedCornerShape(999.dp),
+        color = Color(0xFFE5E7EB)
+    ) {
+        Text(
+            text = text,
+            color = Color(0xFF111827),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+        )
+    }
+}
+
+
+/*@Composable
+private fun AttendanceCard(
+    title: String,
+    time: String,
+    subtitle: String,
+    state: AttendanceCardState,
+    badgeText: String? = null,
+    extraLine: String? = null,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        onClick = onClick,
+        enabled = state == AttendanceCardState.Ready,
+        modifier = modifier
+            .fillMaxWidth()
+            .height(140.dp),
+        shape = RoundedCornerShape(14.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(title, fontWeight = FontWeight.SemiBold)
+            Column {
+                Text(
+                    time,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(6.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (!badgeText.isNullOrBlank()) {
+                        AssistChip(
+                            onClick = { },
+                            label = { Text(badgeText) },
+                            colors = AssistChipDefaults.assistChipColors(
+                                containerColor = Color(0xFFE5E7EB),
+                                labelColor = Color(0xFF111827)
+                            )
+                        )
+                    }
+                    Text(subtitle, color = Muted)
+                    if (!extraLine.isNullOrBlank()) {
+                        Text(extraLine, color = Muted, fontSize = 12.sp)
+                    }
+                }
+            }
+        }
+    }
+}*/
+
+/*@Composable
 private fun AttendanceCard(
     title: String,
     time: String,
@@ -331,7 +499,7 @@ private fun AttendanceCard(
             }
         }
     }
-}
+}*/
 
 @Composable
 private fun QuickMenu(

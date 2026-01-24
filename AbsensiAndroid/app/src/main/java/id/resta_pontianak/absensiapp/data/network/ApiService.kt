@@ -36,6 +36,9 @@ interface ApiService {
     @GET("attendance/get")
     suspend fun getAttendanceToday(): AttendanceGetResp
 
+    @GET("attendance/session-today")
+    suspend fun getAttendanceSessionToday(): AttendanceSessionTodayResp
+
     @GET("attendance/list")
     suspend fun attendanceList(
         @Query("from") from: String,

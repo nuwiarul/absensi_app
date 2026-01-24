@@ -33,6 +33,10 @@ pub struct AttendanceReq {
 
     pub leave_type: Option<AttendanceLeaveType>,   // atau enum
     pub leave_notes: Option<String>,
+
+    /// Jika `true`, user meminta dicatat sebagai apel (laporan saja, tidak mempengaruhi tukin).
+    /// Backend tetap memvalidasi eligibility (mis. harus di dalam geofence & masih dalam window apel).
+    pub apel: Option<bool>,
 }
 
 #[derive(Debug, Serialize)]
@@ -51,6 +55,27 @@ pub struct AttendanceDto {
 pub struct AttendanceResp {
     pub status: &'static str,
     pub data: AttendanceDto,
+}
+
+/// DTO ringkas untuk kebutuhan attendance card (mobile).
+///
+/// - `work_date` adalah tanggal kerja dari session yang relevan untuk card.
+/// - Jika duty lintas hari sedang/akan berjalan, `is_duty=true` dan duty window terisi.
+#[derive(Debug, Serialize, Clone)]
+pub struct AttendanceSessionTodayDto {
+    pub work_date: NaiveDate,
+    pub check_in_at: Option<DateTime<Utc>>,
+    pub check_out_at: Option<DateTime<Utc>>,
+
+    pub is_duty: bool,
+    pub duty_start_at: Option<DateTime<Utc>>,
+    pub duty_end_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct AttendanceSessionTodayResp {
+    pub status: &'static str,
+    pub data: AttendanceSessionTodayDto,
 }
 
 #[derive(Debug, Serialize,  Default, sqlx::FromRow)]
