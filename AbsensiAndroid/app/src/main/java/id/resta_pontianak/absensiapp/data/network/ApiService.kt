@@ -45,6 +45,13 @@ interface ApiService {
         @Query("to") to: String
     ): ApiResponse<List<AttendanceSessionDto>>
 
+    // ===== Riwayat Apel (mobile) =====
+    @GET("attendance/apel/history")
+    suspend fun apelHistory(
+        @Query("from") from: String,
+        @Query("to") to: String
+    ): ApiResponse<List<AttendanceApelDto>>
+
     // ===== Working days (calendar) =====
     @GET("working-days")
     suspend fun workingDays(

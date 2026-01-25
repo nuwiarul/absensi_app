@@ -3,6 +3,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
 use sqlx::Error;
 use uuid::Uuid;
+use crate::dtos::attendance_apel::AttendanceApelDto;
 
 #[async_trait]
 pub trait AttendanceApelRepo {
@@ -19,6 +20,14 @@ pub trait AttendanceApelRepo {
         kind: &str,
         source_event: &str,
     ) -> Result<(), Error>;
+
+    async fn list_attendance_apel_by_user_from_to(
+        &self,
+        user_id: Uuid,
+        from: NaiveDate,
+        to: NaiveDate,
+    ) -> Result<Vec<AttendanceApelDto>, Error>;
+
 }
 
 #[async_trait]
@@ -54,5 +63,35 @@ impl AttendanceApelRepo for DBClient {
         .await?;
 
         Ok(())
+    }
+
+    async fn list_attendance_apel_by_user_from_to(
+        &self,
+        user_id: Uuid,
+        from: NaiveDate,
+        to: NaiveDate,
+    ) -> Result<Vec<AttendanceApelDto>, Error> {
+        let rows = sqlx::query_as!(
+        AttendanceApelDto,
+        r#"
+        SELECT
+          work_date,
+          occurred_at,
+          kind,
+          source_event
+        FROM attendance_apel
+        WHERE user_id = $1
+          AND work_date >= $2
+          AND work_date <= $3
+        ORDER BY work_date DESC, occurred_at DESC
+        "#,
+        user_id,
+        from,
+        to,
+    )
+            .fetch_all(&self.pool)
+            .await?;
+
+        Ok(rows)
     }
 }

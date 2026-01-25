@@ -69,6 +69,7 @@ fun AccountScreen(
     onRiwayatKehadiran: () -> Unit,
     onRiwayatTunkin: () -> Unit,
     onJadwalDinas: () -> Unit,
+    onClickRiwayatApel: () -> Unit,
     pendingDutySubmittedCount: Int,
     onLogout: () -> Unit,
     profileUrl: (String) -> String,
@@ -136,7 +137,7 @@ fun AccountScreen(
                 )
             }
 
-            item { MenuRow("Riwayat Apel", Icons.Filled.AssignmentTurnedIn, onRiwayatTunkin) }
+            item { MenuRow("Riwayat Apel", Icons.Filled.AssignmentTurnedIn, onClickRiwayatApel) }
 
             item { MenuRow("Change Password", Icons.Filled.Lock, onChangePassword) }
 

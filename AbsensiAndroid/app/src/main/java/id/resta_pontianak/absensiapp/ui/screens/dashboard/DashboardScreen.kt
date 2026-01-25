@@ -107,9 +107,10 @@ fun DashboardScreen(
     onClickMasuk: () -> Unit,
     onClickKeluar: () -> Unit,
     onClickTunkin: () -> Unit,
+    onClickRiwayatApel: () -> Unit,
     onClickSchedule: () -> Unit,
     onClickIjin: () -> Unit,
-    onClickRiwayatAbsen: () -> Unit,
+    //onClickRiwayatAbsen: () -> Unit,
     onLogoutClick: () -> Unit,
     onViewAllAnnouncements: () -> Unit,
     announcements: List<DashboardAnnouncementUi>,
@@ -196,7 +197,7 @@ fun DashboardScreen(
                 QuickMenu(
                     onClickTunkin = onClickTunkin,
                     onClickSchedule = onClickSchedule,
-                    onClickApel = onClickIjin,
+                    onClickApel = onClickRiwayatApel,
                 )
             }
 

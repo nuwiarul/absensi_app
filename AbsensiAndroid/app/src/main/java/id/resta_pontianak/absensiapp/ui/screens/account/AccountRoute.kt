@@ -54,6 +54,7 @@ fun AccountRoute(
     onRiwayatKehadiran: () -> Unit,
     onRiwayatTunkin: () -> Unit,
     onJadwalDinas: () -> Unit,
+    onRiwayatApel: () -> Unit,
     onLogout: () -> Unit,
     vm: AccountViewModel = hiltViewModel()
 ) {
@@ -175,6 +176,7 @@ fun AccountRoute(
                 showChangePassword = true
                 vm.consumeChangePasswordError()
             },
+            onClickRiwayatApel = onRiwayatApel
         )
 
         if (showPickSheet) {

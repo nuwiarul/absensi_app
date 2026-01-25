@@ -68,6 +68,7 @@ import id.resta_pontianak.absensiapp.ui.screens.tukin.TukinHistoryRoute
 import java.time.YearMonth
 import id.resta_pontianak.absensiapp.ui.badges.LeaveBadgeViewModel
 import id.resta_pontianak.absensiapp.ui.screens.announcement.AnnouncementsRoute
+import id.resta_pontianak.absensiapp.ui.screens.apelhistory.ApelHistoryRoute
 
 private val BottomNavBlue = Color(0xFF0B2A5A)
 
@@ -206,8 +207,11 @@ fun AppNav(
                 DashboardRoute(
                     tokenStore = tokenStore,
                     onLogout = navController::goToLoginClearBackstack,
-                    onGoTunkin = { /* nanti nav.navigate("tunkin") */ },
-                    onGoSchedule = { /* nanti nav.navigate("schedule") */ },
+                    onGoTunkin = {
+                        val m = YearMonth.now().toString()
+                        navController.navigate("${Routes.TukinHistory}?month=$m")
+                    },
+                    onGoSchedule = { navController.navigate(Routes.DutySchedules) },
                     onGoAttendance = { action ->
                         // nanti: nav ke halaman absen lokasi/selfie
                         // untuk sekarang bisa log/placeholder
@@ -226,9 +230,14 @@ fun AppNav(
                     },
                     onAnnouncements = {
                         navController.navigate(Routes.Announcements)
-                    }
+                    },
+                    onRiwayatApel = { navController.navigate(Routes.ApelHistory) },
 
                 )
+            }
+
+            composable(Routes.ApelHistory) {
+                ApelHistoryRoute(onBack = { navController.popBackStack() })
             }
 
             composable(Routes.AttendanceHistory) {
@@ -291,6 +300,7 @@ fun AppNav(
                         navController.navigate("${Routes.TukinHistory}?month=$m")
                     },
                     onJadwalDinas = { navController.navigate(Routes.DutySchedules) },
+                    onRiwayatApel = { navController.navigate(Routes.ApelHistory) },
                     onLogout = navController::goToLoginClearBackstack
                 )
             }
@@ -543,6 +553,7 @@ private fun isBottomBarVisible(route: String?): Boolean {
             Routes.Profile, // Informasi Profil
             Routes.DutySchedules, // Jadwal Dinas
             Routes.Announcements,
+        Routes.ApelHistory
             // nanti bisa tambah: Routes.ChangePasswordScreen, dll,
         )
     ) return false

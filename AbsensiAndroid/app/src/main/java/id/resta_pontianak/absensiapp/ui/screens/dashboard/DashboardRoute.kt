@@ -25,6 +25,7 @@ fun DashboardRoute(
     onRiwayatAbsen: () -> Unit,
     onIjin: () -> Unit,
     onAnnouncements: () -> Unit,
+    onRiwayatApel: () -> Unit,
     onGoAttendance: (type: AttendanceAction) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -76,7 +77,9 @@ fun DashboardRoute(
         onClickTunkin = onGoTunkin,
         onClickSchedule = onGoSchedule,
         onClickIjin = onIjin,
-        onClickRiwayatAbsen = onRiwayatAbsen,
+        //onClickRiwayatAbsen = onRiwayatAbsen,
+        onClickRiwayatApel = onRiwayatApel,
+
 
         onLogoutClick = {
             scope.launch {

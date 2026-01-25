@@ -25,6 +25,7 @@ use crate::database::duty_schedule::DutyScheduleRepo;
 use crate::database::leave_request::LeaveRequestRepo;
 use crate::database::schedule::ScheduleRepo;
 use crate::database::work_pattern::{pick_effective_pattern, WorkPatternRepo};
+use crate::dtos::attendance_apel::{AttendanceApelHistoryQuery, AttendanceApelHistoryResp};
 use crate::dtos::duty_schedule::DutyScheduleDto;
 use crate::dtos::schedule::{can_manage_schedule, ScheduleQuery, SchedulesResp};
 use crate::handler::attendance_admin::attendance_admin_handler;
@@ -37,6 +38,7 @@ pub fn attendance_handler() -> Router {
         .route("/session-today", get(get_attendance_session_today))
         .route("/get", get(find_attendance))
         .route("/list", get(list_attendances))
+        .route("/apel/history", get(get_attendance_apel_history))
         .nest("/admin", attendance_admin_handler())
 }
 
@@ -1582,4 +1584,29 @@ pub async fn list_attendances(
     };
 
     Ok(Json(response).into_response())
+}
+
+
+pub async fn get_attendance_apel_history(
+    Extension(app_state): Extension<Arc<AppState>>,
+    Extension(user_claims): Extension<AuthMiddleware>,
+    Query(q): Query<AttendanceApelHistoryQuery>,
+) -> Result<impl IntoResponse, HttpError> {
+    q.validate()
+        .map_err(|e| HttpError::bad_request(e.to_string()))?;
+
+    let rows = app_state
+        .db_client
+        .list_attendance_apel_by_user_from_to(
+            user_claims.user_claims.user_id,
+            q.from,
+            q.to,
+        )
+        .await
+        .map_err(|e| HttpError::server_error(e.to_string()))?;
+
+    Ok(Json(AttendanceApelHistoryResp {
+        status: "200",
+        data: rows,
+    }))
 }

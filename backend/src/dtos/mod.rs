@@ -25,6 +25,7 @@ pub mod tukin;
 pub mod announcement;
 pub mod dashboard;
 pub mod duty_schedule_request;
+pub mod attendance_apel;
 
 #[derive(Debug, Serialize)]
 pub struct SuccessResponse {

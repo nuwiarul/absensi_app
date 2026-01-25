@@ -29,4 +29,7 @@ object Routes {
     const val DutySchedules = "duty_schedules"
 
     const val Announcements = "announcements"
+
+    // Riwayat Apel (placeholder UI – backend belum tersedia)
+    const val ApelHistory = "apel_history"
 }

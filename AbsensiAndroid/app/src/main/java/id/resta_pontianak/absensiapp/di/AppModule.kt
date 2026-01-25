@@ -26,6 +26,7 @@ import id.resta_pontianak.absensiapp.data.repo.DutyScheduleRepository
 import id.resta_pontianak.absensiapp.data.repo.LeaveRepository
 import id.resta_pontianak.absensiapp.data.repo.SettingsRepository
 import id.resta_pontianak.absensiapp.data.repo.TukinRepository
+import id.resta_pontianak.absensiapp.data.repo.ApelRepository
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -163,5 +164,10 @@ object AppModule {
     @Provides
     @Singleton
     fun provideTukinStore(@ApplicationContext ctx: Context): TukinStore = TukinStore(ctx)
+
+    @Provides
+    @Singleton
+    fun provideApelRepository(api: ApiService): ApelRepository =
+        ApelRepository(api)
 
 }
