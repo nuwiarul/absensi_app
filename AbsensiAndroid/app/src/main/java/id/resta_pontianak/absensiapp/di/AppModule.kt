@@ -37,7 +37,9 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
-    private const val BASE_URL = "http://10.0.2.2:8000/api/"
+    //private const val BASE_URL = "http://10.0.2.2:8000/api/"
+
+    private const val BASE_URL = "https://api.resta-pontianak.my.id/api/"
 
     @Provides
     @Singleton

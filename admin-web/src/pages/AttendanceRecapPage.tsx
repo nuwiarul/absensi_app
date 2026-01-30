@@ -111,7 +111,7 @@ function isoToYmdInTz(iso: string, tz: string): string {
   }
 }
 
-function monthValueInTz(d: Date, tz: string) {
+/*function monthValueInTz(d: Date, tz: string) {
   try {
     const parts = new Intl.DateTimeFormat("en-US", {
       timeZone: tz,
@@ -125,7 +125,7 @@ function monthValueInTz(d: Date, tz: string) {
   } catch {
     return toMonthValue(d)
   }
-}
+}*/
 
 function fmtDateId(ymd?: string) {
   if (!ymd) return ""

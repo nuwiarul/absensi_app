@@ -25,10 +25,11 @@ import type { Geofence } from "@/features/geofences/types"
 import type { WorkingDay } from "@/features/working-days/types"
 import type { DutyScheduleDto } from "@/features/duty-schedules/types"
 import type { LeaveRequestDto } from "@/features/leave-requests/types"
+import {apiErrorMessage} from "@/lib/api-error.ts";
 
 type LeaveType = "NORMAL" | "DINAS_LUAR" | "WFA" | "WFH" | "IJIN" | "SAKIT"
 
-type LeaveTypeQuick = "DINAS_LUAR" | "IJIN" | "SAKIT"
+//type LeaveTypeQuick = "DINAS_LUAR" | "IJIN" | "SAKIT"
 
 const LEAVE_TYPES: { value: LeaveType; label: string }[] = [
   { value: "NORMAL", label: "Normal" },
@@ -178,33 +179,11 @@ export default function AttendanceManagePage() {
   const isSuperadmin = role === "SUPERADMIN"
   const isSatkerAdmin = role === "SATKER_ADMIN"
 
-  if (!isSuperadmin && !isSatkerAdmin) {
-    return (
-        <div className="p-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Akses ditolak</CardTitle>
-            </CardHeader>
-            <CardContent>Hanya SUPERADMIN / SATKER_ADMIN yang dapat mengedit absensi.</CardContent>
-          </Card>
-        </div>
-    )
-  }
+
 
   const sessionSatkerId = session?.satkerId
 
-  if (isSatkerAdmin && !sessionSatkerId) {
-    return (
-        <div className="p-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Konfigurasi sesi tidak lengkap</CardTitle>
-            </CardHeader>
-            <CardContent>Session tidak memiliki satkerId, jadi SATKER_ADMIN tidak bisa mengedit absensi.</CardContent>
-          </Card>
-        </div>
-    )
-  }
+
 
   const tzQ = useTimezoneQuery()
   const tz = tzQ.data?.timezone ?? "Asia/Jakarta"
@@ -238,7 +217,7 @@ export default function AttendanceManagePage() {
   const geoBySatker = useMemo(() => {
     const all = geosQ.data ?? []
     if (!satkerId) return []
-    return all.filter((g) => g.satker_id === satkerId)
+    return all.filter((g) => g.satker?.id === satkerId)
   }, [geosQ.data, satkerId])
 
   const recapEnabled = !!userId && !!from && !!to
@@ -446,8 +425,8 @@ export default function AttendanceManagePage() {
       toast.success("Absensi tersimpan")
       setDlgOpen(false)
       recapQ.refetch()
-    } catch (e: any) {
-      toast.error(e?.response?.data?.message ?? "Gagal menyimpan absensi")
+    } catch (e: unknown) {
+      toast.error(apiErrorMessage(e) ?? "Gagal menyimpan absensi")
     }
   }
 
@@ -459,8 +438,8 @@ export default function AttendanceManagePage() {
       toast.success("Absensi dihapus")
       setDlgOpen(false)
       recapQ.refetch()
-    } catch (e: any) {
-      toast.error(e?.response?.data?.message ?? "Gagal menghapus absensi")
+    } catch (e: unknown) {
+      toast.error(apiErrorMessage(e) ?? "Gagal menghapus absensi")
     }
   }
 
@@ -485,9 +464,35 @@ export default function AttendanceManagePage() {
       setDlgOpen(false)
       // refresh lock state + recap
       await Promise.allSettled([leaveQ.refetch(), recapQ.refetch()])
-    } catch (e: any) {
-      toast.error(e?.response?.data?.message ?? "Gagal quick approve")
+    } catch (e: unknown) {
+      toast.error(apiErrorMessage(e) ?? "Gagal quick approve")
     }
+  }
+
+  if (!isSuperadmin && !isSatkerAdmin) {
+    return (
+        <div className="p-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Akses ditolak</CardTitle>
+            </CardHeader>
+            <CardContent>Hanya SUPERADMIN / SATKER_ADMIN yang dapat mengedit absensi.</CardContent>
+          </Card>
+        </div>
+    )
+  }
+
+  if (isSatkerAdmin && !sessionSatkerId) {
+    return (
+        <div className="p-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Konfigurasi sesi tidak lengkap</CardTitle>
+            </CardHeader>
+            <CardContent>Session tidak memiliki satkerId, jadi SATKER_ADMIN tidak bisa mengedit absensi.</CardContent>
+          </Card>
+        </div>
+    )
   }
 
   return (

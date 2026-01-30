@@ -2,6 +2,10 @@ package id.resta_pontianak.absensiapp.ui.screens.attendance
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.ExifInterface
 import android.util.Log
 import android.view.ViewGroup
 import androidx.camera.core.CameraSelector
@@ -53,7 +57,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetectorOptions
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -304,8 +310,10 @@ private fun takePhoto(
     onError: (String) -> Unit
 ) {
     val dir = File(context.cacheDir, "selfies").apply { mkdirs() }
-    val ts = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(System.currentTimeMillis())
-    val file = File(dir, "selfie_$ts.jpg")
+    //val ts = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(System.currentTimeMillis())
+    //val file = File(dir, "selfie_$ts.jpg")
+
+    val file = File(dir, "selfie.jpg")
 
     val output = ImageCapture.OutputFileOptions.Builder(file).build()
 
@@ -314,8 +322,22 @@ private fun takePhoto(
         ContextCompat.getMainExecutor(context),
         object : ImageCapture.OnImageSavedCallback {
             override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                Log.d("Liveness", "Saved to: ${file.absolutePath}")
-                onCaptured(file.absolutePath)
+                //Log.d("Liveness", "Saved to: ${file.absolutePath}")
+                //onCaptured(file.absolutePath)
+
+                try {
+                    compressJpegUnderSize(
+                        inputFile = file,
+                        outputFile = file,
+                        maxBytes = 512 * 1024,
+                        maxDimPx = 720
+                    )
+                    Log.d("Liveness", "Saved(compressed) to: ${file.absolutePath} (${file.length()} bytes)")
+                    onCaptured(file.absolutePath)
+                } catch (e: Exception) {
+                    Log.e("Liveness", "Post-process error", e)
+                    onError("Foto tersimpan tapi gagal kompres: ${e.message}")
+                }
             }
 
             override fun onError(exception: ImageCaptureException) {
@@ -324,4 +346,119 @@ private fun takePhoto(
             }
         }
     )
+}
+
+private fun compressJpegUnderSize(
+    inputFile: File,
+    outputFile: File,
+    maxBytes: Int = 512 * 1024,
+    maxDimPx: Int = 1024
+) {
+    // 1) Decode dengan sampling biar hemat memori
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeFile(inputFile.absolutePath, bounds)
+
+    val (w, h) = bounds.outWidth to bounds.outHeight
+    if (w <= 0 || h <= 0) throw IllegalStateException("Gagal baca ukuran gambar")
+
+    val sample = calculateInSampleSize(w, h, maxDimPx, maxDimPx)
+    val opts = BitmapFactory.Options().apply { inSampleSize = sample }
+    var bmp = BitmapFactory.decodeFile(inputFile.absolutePath, opts)
+        ?: throw IllegalStateException("Gagal decode bitmap")
+
+    // 2) Fix rotasi dari EXIF (kamera depan kadang bikin orientasi aneh)
+    bmp = applyExifRotationIfNeeded(inputFile, bmp)
+
+    // 3) Pastikan max dimension <= maxDimPx
+    val scaled = scaleDown(bmp, maxDimPx)
+    if (scaled !== bmp) bmp.recycle()
+
+    // 4) Compress bertahap sampai < maxBytes
+    val baos = ByteArrayOutputStream()
+    var quality = 85
+    scaled.compress(Bitmap.CompressFormat.JPEG, quality, baos)
+
+    while (baos.size() > maxBytes && quality > 35) {
+        baos.reset()
+        quality -= 10
+        scaled.compress(Bitmap.CompressFormat.JPEG, quality, baos)
+    }
+
+    // Kalau masih > maxBytes, turunkan dimensi lagi (opsional tapi bikin makin aman)
+    var finalBytes = baos.toByteArray()
+    var currentBitmap = scaled
+
+    while (finalBytes.size > maxBytes && (currentBitmap.width > 480 || currentBitmap.height > 480)) {
+        val nextDim = (maxOf(currentBitmap.width, currentBitmap.height) * 0.85f).toInt().coerceAtLeast(480)
+        val next = scaleDown(currentBitmap, nextDim)
+
+        if (next !== currentBitmap) currentBitmap.recycle()
+        currentBitmap = next
+
+        baos.reset()
+        quality = 80
+        currentBitmap.compress(Bitmap.CompressFormat.JPEG, quality, baos)
+        while (baos.size() > maxBytes && quality > 35) {
+            baos.reset()
+            quality -= 10
+            currentBitmap.compress(Bitmap.CompressFormat.JPEG, quality, baos)
+        }
+        finalBytes = baos.toByteArray()
+    }
+
+    // 5) Tulis ke file (overwrite)
+    FileOutputStream(outputFile, false).use { it.write(finalBytes) }
+
+    // cleanup
+    currentBitmap.recycle()
+    baos.close()
+}
+
+private fun calculateInSampleSize(
+    srcW: Int,
+    srcH: Int,
+    reqW: Int,
+    reqH: Int
+): Int {
+    var inSampleSize = 1
+    var halfW = srcW / 2
+    var halfH = srcH / 2
+    while ((halfW / inSampleSize) >= reqW && (halfH / inSampleSize) >= reqH) {
+        inSampleSize *= 2
+    }
+    return inSampleSize.coerceAtLeast(1)
+}
+
+private fun scaleDown(bmp: Bitmap, maxDim: Int): Bitmap {
+    val w = bmp.width
+    val h = bmp.height
+    val maxSide = maxOf(w, h)
+    if (maxSide <= maxDim) return bmp
+
+    val scale = maxDim.toFloat() / maxSide.toFloat()
+    val newW = (w * scale).toInt().coerceAtLeast(1)
+    val newH = (h * scale).toInt().coerceAtLeast(1)
+    return Bitmap.createScaledBitmap(bmp, newW, newH, true)
+}
+
+private fun applyExifRotationIfNeeded(file: File, bmp: Bitmap): Bitmap {
+    val exif = ExifInterface(file.absolutePath)
+    val orientation = exif.getAttributeInt(
+        ExifInterface.TAG_ORIENTATION,
+        ExifInterface.ORIENTATION_NORMAL
+    )
+
+    val rotateDegrees = when (orientation) {
+        ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+        ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+        ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+        else -> 0f
+    }
+
+    if (rotateDegrees == 0f) return bmp
+
+    val m = Matrix().apply { postRotate(rotateDegrees) }
+    val rotated = Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true)
+    bmp.recycle()
+    return rotated
 }

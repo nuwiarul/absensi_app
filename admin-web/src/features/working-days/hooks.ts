@@ -2,12 +2,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { deleteWorkingDay, listWorkingDays, upsertWorkingDay } from "./api"
 import type { UpsertWorkingDayReq } from "./types"
 
-export function useWorkingDays(params: { satkerId?: string; from?: string; to?: string }) {
+export function useWorkingDays(params: { satkerId?: string; from?: string; to?: string }, enabled = true) {
   return useQuery({
     queryKey: ["working-days", params.satkerId, params.from, params.to],
     queryFn: () =>
       listWorkingDays({ satkerId: params.satkerId!, from: params.from!, to: params.to! }),
-    enabled: Boolean(params.satkerId && params.from && params.to),
+    enabled: enabled && Boolean(params.satkerId && params.from && params.to),
   })
 }
 

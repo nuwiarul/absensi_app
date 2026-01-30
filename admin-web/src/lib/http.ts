@@ -4,6 +4,9 @@ import { getToken, clearSession } from "./auth"
 export const API_BASE_URL =
     import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api"
 
+/*export const API_BASE_URL =
+    import.meta.env.VITE_API_BASE_URL ?? "https://api.resta-pontianak.my.id/api"*/
+
 export const http = axios.create({
     baseURL: API_BASE_URL,
     timeout: 30_000,

@@ -1,5 +1,3 @@
-import * as React from "react"
-
 export type CalendarCell = {
     ymd: string
     day: number

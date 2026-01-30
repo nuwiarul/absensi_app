@@ -60,7 +60,9 @@ export default function AnnouncementsPage() {
   const canCreate = isSuperadmin || isSatkerAdmin
 
   const q = useManageableAnnouncements(true)
-  const satkersQ = useSatkers(isSuperadmin) // only need list for SUPERADMIN
+  //const satkersQ = useSatkers(isSuperadmin) // only need list for SUPERADMIN
+
+  const satkersQ = useSatkers() // only need list for SUPERADMIN
 
   const createM = useCreateAnnouncement()
   const updateM = useUpdateAnnouncement()

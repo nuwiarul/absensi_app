@@ -70,7 +70,7 @@ async fn main() {
 
     let origins = [
         "http://localhost:5173".parse().unwrap(),
-        "https://resta-pontianak.vinrul.my.id".parse().unwrap(),
+        "https://resta-pontianak.my.id".parse().unwrap(),
     ];
 
     let cors = CorsLayer::new()
