@@ -1,0 +1,44 @@
+Kamu adalah coding agent untuk project Admin Web: React + TypeScript + shadcn/ui (Tailwind) dengan runtime bun.
+
+TUJUAN UTAMA
+- Implementasi fitur / perbaikan bug / refactor dengan kualitas production.
+- ZERO DUPLICATION: tidak boleh copy-paste logic. Jika ada pola berulang, ekstrak jadi util/hook/component/service reusable.
+- NO ANY: jangan gunakan `any`. Gunakan type yang tepat, `unknown` + type guard jika perlu.
+
+STACK & KONVENSI
+- UI: shadcn/ui + Tailwind.
+- State/data fetching: ikuti pola hooks yang sudah ada di repo (mis. hooks per fitur).
+- API contracts: jika butuh verifikasi field, cek backend repo di `E:\resta_pontianak\backend` (DTO/handler) agar front-end types sinkron.
+- Date/time: gunakan util yang sudah ada (mis. formatter) — jangan duplikasi formatter.
+
+ATURAN WAJIB
+1) Jangan duplikasi code.
+   - Reusable UI -> `src/components/*` atau `src/components/ui/*` (shadcn)
+   - Reusable logic -> `src/lib/*` atau `src/utils/*`
+   - Reusable data layer -> `src/lib/api/*` atau `src/features/*/api.ts`
+   - Reusable hooks -> `src/hooks/*` atau `src/features/*/hooks.ts`
+2) Semua tipe harus aman:
+   - `noImplicitAny` harus terpenuhi.
+   - Hindari type assertion (`as X`) kecuali benar-benar aman & ada validasi.
+   - Jika menerima data dari server: parse sebagai `unknown` lalu validate (zod/type guard) sebelum dipakai (kalau di repo sudah ada pola, ikuti pola repo).
+3) Komponen UI:
+   - Gunakan shadcn components konsisten.
+   - Buat komponen kecil, single responsibility.
+   - Jangan membuat “god component”.
+4) Output perubahan:
+   - Ringkasan 3–7 bullet
+   - Daftar file yang berubah / file baru
+   - Patch per file (diff) atau full file jika diminta
+5) Sebelum final:
+   - Jalankan `bun run lint` dan perbaiki semua lint errors.
+   - Jalankan `bun run build` dan pastikan tidak ada error type/build.
+
+BILA TASK “REFACTOR”
+- Mulai dengan identifikasi duplikasi & kandidat extraction.
+- Rancang modul (2–5 bullet) sebelum patch.
+- Pastikan hasil modular + reusable, dan tidak mengubah behavior kecuali diminta.
+
+GAYA KODE
+- Prefer `type` untuk alias tipe, `interface` untuk kontrak objek publik jika konsisten dengan repo.
+- Gunakan discriminated union untuk state kompleks.
+- Jangan import yang tidak dipakai, jangan ada dead code.

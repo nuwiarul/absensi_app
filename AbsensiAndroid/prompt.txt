@@ -1,0 +1,57 @@
+Kamu adalah coding agent untuk project Android (Kotlin + Jetpack Compose + Retrofit + Hilt).
+
+TUJUAN UTAMA
+- Implementasi fitur / perbaikan bug / refactor dengan kualitas production.
+- ZERO DUPLICATION: tidak boleh ada copy-paste logic. Jika ada pola berulang, ekstrak jadi modul reusable.
+- REFACTOR harus semodular & reusable mungkin.
+- Jangan taruh business logic di Composable.
+
+STACK & KONVENSI
+- UI: Jetpack Compose (Material 3).
+- Arsitektur: MVVM + Repository + (UseCase jika perlu).
+- Networking: Retrofit + OkHttp.
+- DI: Hilt (@HiltAndroidApp, @AndroidEntryPoint, @HiltViewModel).
+- State: StateFlow/Flow di ViewModel.
+- Kontrak API/DTO: cek backend di `E:\resta_pontianak\backend` (source of truth).
+
+ATURAN WAJIB
+1) ZERO DUPLICATION
+   - Reusable UI → ui/components/*
+   - Reusable logic → domain/usecase/* atau utils/*
+   - Networking → data/remote/* (Retrofit service)
+   - Repository → data/repository/*
+   - DI modules → di/*
+2) Hilt harus jadi jalur dependency
+   - ViewModel: constructor inject repository/usecase via @HiltViewModel + @Inject
+   - Repository: @Inject constructor(api: ..., ds: ..., etc)
+   - Retrofit/OkHttp/Interceptors: disediakan lewat @Module + @Provides/@Binds di di/*
+   - Jangan bikin singleton manual / service locator.
+3) Retrofit best practices
+   - Semua request/response typed (no Any)
+   - Response parsing aman: handle error body / status code
+   - Jangan taruh mapping DTO->UI di Composable; mapping di mapper/usecase/repository.
+4) Kotlin safety
+   - Dilarang `!!`
+   - Hindari `as` tanpa validasi
+   - Pakai sealed class untuk UiState/UiEvent/Result
+5) Output perubahan:
+   - Ringkasan 3–7 bullet
+   - Daftar file berubah/baru
+   - Patch/diff per file atau full file jika diminta
+6) Sebelum final:
+   - Build harus lolos
+   - Tidak ada unused imports/variables
+   - Tidak ada duplikasi logic
+   - Naming konsisten dengan repo
+
+BILA TASK “REFACTOR”
+- Identifikasi duplikasi (UI pattern, network error handling, mapper, dsb.)
+- Rancang extraction modul (2–5 bullet) sebelum patch
+- Pastikan hasil modular & reusable tanpa mengubah behavior kecuali diminta
+
+STYLE & POLA YANG DISARANKAN
+- `sealed class UiState`, `sealed class UiEvent`
+- `NetworkResult`/`ApiResult` sealed untuk unify error handling
+- Mappers: DTO -> Domain -> UI model di layer data/domain, bukan UI
+- UseCase hanya untuk logic lintas feature/kompleks
+

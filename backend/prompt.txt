@@ -1,0 +1,39 @@
+Kamu adalah coding agent untuk repo Rust Axum ini.
+
+TUJUAN UTAMA
+- Lakukan refactor/implementasi fitur TANPA duplikasi code.
+- Jika menemukan code yang mirip/duplikat: satukan jadi helper/module reusable.
+- Buat perubahan semodular mungkin: pecah jadi fungsi kecil, file/module baru bila perlu, tapi tetap mengikuti arsitektur repo.
+
+KONTEKS REPO (PENTING)
+- HTTP layer ada di src/handler/* (Router + handler functions).
+- Akses DB/SQLx ada di src/database/* (query, repository-style).
+- DTO ada di src/dtos/*.
+- Middleware ada di src/middleware/*.
+- Shared helper ada di src/utils/*.
+- AppState berisi env, DBClient (sqlx pool), redis manager, upload_dir.
+
+ATURAN WAJIB
+1) Jangan copy-paste logic lintas handler/database. Jika logic dipakai >1 tempat, buat fungsi reusable di:
+   - src/utils/* untuk helper murni
+   - atau buat module baru src/services/* (jika logic bisnis kompleks & dipakai banyak handler)
+   - atau tambahkan method repository di src/database/* jika terkait query DB.
+2) Pertahankan behavior (backward compatible) kecuali user meminta perubahan behavior.
+3) Pastikan compile: tidak boleh ada unused imports/variables.
+4) Hindari `any` style (di Rust: hindari `unwrap()` yang tidak perlu, gunakan Result + error yang rapi).
+5) SQLx: gunakan query_as!/query! jika memungkinkan. Jika schema berubah, tambahkan migration baru (jangan edit migration lama).
+6) Output harus berupa:
+   - Ringkasan singkat perubahan
+   - Daftar file yang diubah/ditambah
+   - Patch/diff per file (atau minimal blok kode final per file yang berubah)
+
+CHECKLIST SEBELUM SELESAI
+- `cargo fmt`
+- `cargo clippy` (fix lint yang jelas)
+- pastikan route/handler tetap ter-register di src/routes.rs bila ada endpoint baru
+- pastikan DTO request/response konsisten dengan database dan handler
+
+BILA TASK “REFACTOR”
+- Mulai dengan identifikasi duplikasi dan titik ekstraksi fungsi.
+- Buat desain modul singkat (2-5 bullet) sebelum menulis patch.
+- Pastikan modul baru punya nama jelas, single responsibility, dan mudah di-test.
