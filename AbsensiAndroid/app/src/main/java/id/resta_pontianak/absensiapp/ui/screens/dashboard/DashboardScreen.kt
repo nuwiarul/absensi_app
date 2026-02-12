@@ -266,7 +266,7 @@ private fun Header(fullName: String, nrp: String, satkerName: String, onLogout: 
             ) {
                 // ✅ LOGO di kiri
                 Image(
-                    painter = painterResource(id = R.drawable.logo_pontianak),
+                    painter = painterResource(id = R.drawable.logo_baik_android),
                     contentDescription = "Logo Polresta Pontianak",
                     modifier = Modifier.size(80.dp)
                 )
@@ -275,6 +275,13 @@ private fun Header(fullName: String, nrp: String, satkerName: String, onLogout: 
 
                 Column {
                     Text("Selamat Datang", color = Color.White)
+                    Text(
+                        "di BAIK (Basis Absensi Integritas Kinerja)",
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontSize = 13.sp
+                        )
+                    )
                     Spacer(Modifier.height(4.dp))
                     Text(
                         fullName,

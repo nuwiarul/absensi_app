@@ -211,7 +211,7 @@ private fun AccountHeader(
                             )
                         } else {
                             Image(
-                                painter = painterResource(id = R.drawable.logo_pontianak),
+                                painter = painterResource(id = R.drawable.logo_baik_android),
                                 contentDescription = "Foto Profil",
                                 modifier = Modifier
                                     .size(96.dp)

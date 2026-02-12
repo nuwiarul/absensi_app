@@ -61,10 +61,10 @@ fun LoginScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Image(
-            painter = painterResource(id = R.drawable.logo_pontianak),
-            contentDescription = "Logo Polresta Pontianak",
+            painter = painterResource(id = R.drawable.logo_baik_android),
+            contentDescription = "Logo Baik",
             modifier = Modifier
-                .size(140.dp)
+                .size(240.dp)
                 .padding(bottom = 24.dp)
         )
         Card(
@@ -76,12 +76,12 @@ fun LoginScreen(
                 modifier = Modifier.padding(18.dp)
             ) {
 
-                Text(
+                /*Text(
                     "POLRESTA PONTIANAK",
                     style = MaterialTheme.typography.headlineSmall,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
-                )
+                )*/
 
                 Spacer(Modifier.height(18.dp))
 

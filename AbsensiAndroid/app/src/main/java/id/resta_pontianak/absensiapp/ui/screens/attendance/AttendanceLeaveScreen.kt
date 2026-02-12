@@ -42,8 +42,8 @@ fun AttendanceLeaveScreen(
     val options = remember {
         listOf(
             LeaveType.DINAS_LUAR,
-            LeaveType.WFA,
-            LeaveType.WFH,
+            /*LeaveType.WFA,
+            LeaveType.WFH,*/
             LeaveType.IJIN,
             LeaveType.SAKIT
         )
@@ -51,8 +51,8 @@ fun AttendanceLeaveScreen(
 
     fun labelOf(t: LeaveType): String = when (t) {
         LeaveType.DINAS_LUAR -> "Dinas Luar"
-        LeaveType.WFA -> "WFA"
-        LeaveType.WFH -> "WFH"
+        /*LeaveType.WFA -> "WFA"
+        LeaveType.WFH -> "WFH"*/
         LeaveType.IJIN -> "Ijin"
         LeaveType.SAKIT -> "Sakit"
         LeaveType.NORMAL -> "Normal"
