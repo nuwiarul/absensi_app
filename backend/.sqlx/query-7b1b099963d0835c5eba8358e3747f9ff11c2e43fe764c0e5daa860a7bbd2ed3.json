@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE ranks\n            SET code = COALESCE($2, code),\n                name = COALESCE($3, name),\n                description = COALESCE($4, description),\n                tukin_base = COALESCE($5, tukin_base),\n                updated_at = NOW()\n            WHERE id = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7b1b099963d0835c5eba8358e3747f9ff11c2e43fe764c0e5daa860a7bbd2ed3"
+}

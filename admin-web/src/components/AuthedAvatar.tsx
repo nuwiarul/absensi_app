@@ -2,30 +2,7 @@ import * as React from "react"
 
 import { http } from "@/lib/http"
 import { Avatar } from "@/components/Avatar"
-
-// Cache blob URLs per objectKey (keeps UI snappy when list rerenders).
-const urlCache = new Map<string, string>()
-
-function cacheKeyOf(objectKey: string, nonce: number | string | undefined) {
-  return nonce === undefined ? objectKey : `${objectKey}::${nonce}`
-}
-
-export function invalidateAuthedAvatar(objectKey: string) {
-  // Remove all cached variants for this objectKey.
-  for (const [k, url] of urlCache.entries()) {
-    if (k === objectKey || k.startsWith(objectKey + "::")) {
-      try {
-        URL.revokeObjectURL(url)
-      } catch {
-        // ignore
-      }
-      urlCache.delete(k)
-    }
-  }
-  window.dispatchEvent(
-    new CustomEvent("avatar:invalidate", { detail: { objectKey } })
-  )
-}
+import { cacheKeyOf, getCachedAvatarUrl, storeCachedAvatarUrl } from "@/lib/authed-avatar-cache"
 
 type Props = {
   objectKey?: string | null
@@ -52,7 +29,8 @@ export function AuthedAvatar({ objectKey, nonce, alt, size, className }: Props) 
 
   const [url, setUrl] = React.useState<string | null>(() => {
     if (!objectKey) return null
-    return urlCache.get(cacheKeyOf(objectKey, nonce)) ?? null
+    const ck = cacheKeyOf(objectKey, nonce)
+    return getCachedAvatarUrl(ck) ?? null
   })
 
   React.useEffect(() => {
@@ -65,19 +43,19 @@ export function AuthedAvatar({ objectKey, nonce, alt, size, className }: Props) 
           return
         }
 
-        const ck = cacheKeyOf(objectKey, nonce)
-        const cached = urlCache.get(ck)
-        if (cached) {
-          if (alive) setUrl(cached)
-          return
-        }
+      const ck = cacheKeyOf(objectKey, nonce)
+      const cached = getCachedAvatarUrl(ck)
+      if (cached) {
+        if (alive) setUrl(cached)
+        return
+      }
 
         const res = await http.get<Blob>("/files/profile", {
           params: { key: objectKey },
           responseType: "blob",
         })
         const blobUrl = URL.createObjectURL(res.data)
-        urlCache.set(ck, blobUrl)
+        storeCachedAvatarUrl(ck, blobUrl)
         if (alive) setUrl(blobUrl)
       } catch {
         if (alive) setUrl(null)

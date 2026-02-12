@@ -1,13 +1,15 @@
 use std::sync::Arc;
 
-use axum::{Extension, Json, Router};
 use axum::extract::Query;
 use axum::response::IntoResponse;
 use axum::routing::get;
+use axum::{Extension, Json, Router};
 
 use crate::AppState;
 use crate::auth::rbac::UserRole;
-use crate::dtos::dashboard::{AttendanceCountsQuery, AttendanceCountsResp, SatkerAttendanceCountRow};
+use crate::dtos::dashboard::{
+    AttendanceCountsQuery, AttendanceCountsResp, SatkerAttendanceCountRow,
+};
 use crate::error::HttpError;
 use crate::middleware::auth_middleware::AuthMiddleware;
 
@@ -67,15 +69,17 @@ pub async fn attendance_counts(
         q.date,
         filter_satker
     )
-        .fetch_all(&app_state.db_client.pool)
-        .await
-        .map_err(|e| HttpError::server_error(e.to_string()))?;
+    .fetch_all(&app_state.db_client.pool)
+    .await
+    .map_err(|e| HttpError::server_error(e.to_string()))?;
 
     let data: Vec<SatkerAttendanceCountRow> = rows
         .into_iter()
         .map(|r| {
             let present_pct = if r.total_users.unwrap_or(0) > 0 {
-                let pct = (r.checked_in_count.unwrap_or(0) as f64) / (r.total_users.unwrap_or(0) as f64) * 100.0;
+                let pct = (r.checked_in_count.unwrap_or(0) as f64)
+                    / (r.total_users.unwrap_or(0) as f64)
+                    * 100.0;
                 // two decimals
                 (pct * 100.0).round() / 100.0
             } else {

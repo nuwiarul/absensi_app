@@ -2,30 +2,30 @@ use chrono::{Local, NaiveDate};
 use serde::Serialize;
 use validator::ValidationError;
 
-pub mod user;
-pub mod auth;
-pub mod satker;
-pub mod satker_head;
-pub mod leave_request;
-pub mod geofence;
+pub mod announcement;
+pub mod attendance;
+pub mod attendance_admin;
+pub mod attendance_apel;
 pub mod attendance_challenge;
 pub mod attendance_session;
-pub mod attendance;
-pub mod schedule;
-pub mod upload;
+pub mod auth;
+pub mod dashboard;
+pub mod duty_schedule;
+pub mod duty_schedule_request;
+pub mod geofence;
 pub mod holiday;
+pub mod leave_request;
+pub mod rank;
+pub mod satker;
+pub mod satker_head;
+pub mod schedule;
+pub mod settings;
+pub mod tukin;
+pub mod upload;
+pub mod user;
 pub mod work_calendar;
 pub mod work_pattern;
 pub mod working_days;
-pub mod settings;
-pub mod rank;
-pub mod attendance_admin;
-pub mod duty_schedule;
-pub mod tukin;
-pub mod announcement;
-pub mod dashboard;
-pub mod duty_schedule_request;
-pub mod attendance_apel;
 
 #[derive(Debug, Serialize)]
 pub struct SuccessResponse {

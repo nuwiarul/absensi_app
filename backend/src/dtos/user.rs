@@ -1,10 +1,10 @@
 use crate::auth::rbac::UserRole;
+use crate::dtos::rank::RankDto;
 use crate::dtos::satker::SatkerDto;
 use crate::models::{Rank, Satker, User};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
-use crate::dtos::rank::RankDto;
 
 #[derive(Deserialize, Debug, Clone, Validate)]
 pub struct CreateUserReq {
@@ -59,12 +59,24 @@ pub struct UpdateMyProfileReq {
 
 #[derive(Deserialize, Debug, Clone, Validate)]
 pub struct ChangeMyPasswordReq {
-    #[validate(length(min = 8, max = 64, message = "password harus di antara 8 sampai 64 karakter."))]
+    #[validate(length(
+        min = 8,
+        max = 64,
+        message = "password harus di antara 8 sampai 64 karakter."
+    ))]
     pub old_password: String,
-    #[validate(length(min = 8, max = 64, message = "password harus di antara 8 sampai 64 karakter."))]
+    #[validate(length(
+        min = 8,
+        max = 64,
+        message = "password harus di antara 8 sampai 64 karakter."
+    ))]
     pub password: String,
     #[validate(
-        length(min = 8, max = 64, message = "password harus di antara 8 sampai 64 karakter."),
+        length(
+            min = 8,
+            max = 64,
+            message = "password harus di antara 8 sampai 64 karakter."
+        ),
         must_match(other = "password", message = "password tidak sama")
     )]
     pub password_confirm: String,
@@ -72,10 +84,18 @@ pub struct ChangeMyPasswordReq {
 
 #[derive(Deserialize, Debug, Clone, Validate)]
 pub struct AdminSetPasswordReq {
-    #[validate(length(min = 8, max = 64, message = "password harus di antara 8 sampai 64 karakter."))]
+    #[validate(length(
+        min = 8,
+        max = 64,
+        message = "password harus di antara 8 sampai 64 karakter."
+    ))]
     pub password: String,
     #[validate(
-        length(min = 8, max = 64, message = "password harus di antara 8 sampai 64 karakter."),
+        length(
+            min = 8,
+            max = 64,
+            message = "password harus di antara 8 sampai 64 karakter."
+        ),
         must_match(other = "password", message = "password tidak sama")
     )]
     pub password_confirm: String,
@@ -100,19 +120,18 @@ impl UserDto {
     pub fn to_row_with_satker(row: &User, satkers: &[Satker], ranks: &[Rank]) -> Self {
         let satker = SatkerDto::get_satker_dto(satkers, row.satker_id);
 
-        let mut rank_name : Option<String> = None;
+        let mut rank_name: Option<String> = None;
 
         if let Some(rank_id) = row.rank_id {
             let rank = RankDto::get_rank_dto(ranks, rank_id);
             rank_name = Some(rank.name);
         }
 
-
         UserDto {
             id: row.id,
             satker: satker.clone(),
             rank_id: row.rank_id,
-            rank:rank_name,
+            rank: rank_name,
             nrp: row.nrp.clone(),
             full_name: row.full_name.clone(),
             email: row.email.clone(),
@@ -131,7 +150,7 @@ impl UserDto {
     pub fn to_row_dto(row: &User, satker: &Satker, ranks: &[Rank]) -> Self {
         let satker_dto = SatkerDto::to_row(satker);
 
-        let mut rank_name : Option<String> = None;
+        let mut rank_name: Option<String> = None;
 
         if let Some(rank_id) = row.rank_id {
             let rank = RankDto::get_rank_dto(ranks, rank_id);
@@ -153,13 +172,13 @@ impl UserDto {
     }
 }
 
-#[derive(Serialize, Debug, Clone, )]
+#[derive(Serialize, Debug, Clone)]
 pub struct UserResp {
     pub status: &'static str,
     pub data: UserDto,
 }
 
-#[derive(Serialize, Debug, Clone, )]
+#[derive(Serialize, Debug, Clone)]
 pub struct UsersResp {
     pub status: &'static str,
     pub data: Vec<UserDto>,

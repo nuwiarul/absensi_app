@@ -1,19 +1,18 @@
 use crate::AppState;
-use crate::database::settings::{SettingsRepo, SETTING_DEFAULT_TIMEZONE};
+use crate::database::settings::{SETTING_DEFAULT_TIMEZONE, SettingsRepo};
 use crate::dtos::settings::{TimezoneData, TimezoneResp, UpdateTimezoneReq};
 use crate::error::HttpError;
 use crate::middleware::auth_middleware::AuthMiddleware;
+use crate::utils::timezone_cache::set_timezone_cache;
+use axum::routing::get;
 use axum::{Extension, Json, Router};
-use axum::routing::{get, put};
 use chrono::{Datelike, Utc};
 use chrono_tz::Tz;
 use std::str::FromStr;
 use std::sync::Arc;
-use crate::utils::timezone_cache::set_timezone_cache;
 
 pub fn settings_handler() -> Router {
-    Router::new()
-        .route("/timezone", get(get_timezone).put(update_timezone))
+    Router::new().route("/timezone", get(get_timezone).put(update_timezone))
 }
 
 pub async fn get_timezone(
@@ -45,7 +44,9 @@ pub async fn update_timezone(
 ) -> Result<Json<TimezoneResp>, HttpError> {
     // Only SUPERADMIN can update global settings.
     if auth.user_claims.role != crate::auth::rbac::UserRole::Superadmin {
-        return Err(HttpError::bad_request("hanya SUPERADMIN yang boleh mengubah timezone"));
+        return Err(HttpError::bad_request(
+            "hanya SUPERADMIN yang boleh mengubah timezone",
+        ));
     }
 
     // Validate timezone value.
@@ -54,7 +55,7 @@ pub async fn update_timezone(
         Err(_) => {
             return Err(HttpError::bad_request(
                 "timezone tidak valid. Gunakan Asia/Jakarta, Asia/Makassar, atau Asia/Jayapura",
-            ))
+            ));
         }
     };
 
@@ -71,7 +72,11 @@ pub async fn update_timezone(
 
     app_state
         .db_client
-        .upsert_setting(SETTING_DEFAULT_TIMEZONE, &body.timezone, auth.user_claims.user_id)
+        .upsert_setting(
+            SETTING_DEFAULT_TIMEZONE,
+            &body.timezone,
+            auth.user_claims.user_id,
+        )
         .await
         .map_err(|e| HttpError::server_error(e.to_string()))?;
 

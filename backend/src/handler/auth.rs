@@ -1,23 +1,22 @@
 use crate::AppState;
+use crate::auth::client_channel::{ClientChannel, is_login_allowed};
+use crate::database::satker::SatkerRepo;
 use crate::database::user::UserRepo;
 use crate::dtos::auth::{LoginDto, LoginReq, LoginResp};
 use crate::error::{ErrorMessage, HttpError};
 use crate::utils::password::compare_password;
-use axum::response::IntoResponse;
-use axum::{Extension, Json, Router};
-use std::sync::Arc;
-use axum::http::header::SET_COOKIE;
-use axum::http::HeaderMap;
-use axum::routing::post;
-use axum_extra::extract::cookie::Cookie;
-use validator::Validate;
-use crate::auth::client_channel::{is_login_allowed, ClientChannel};
-use crate::database::satker::SatkerRepo;
 use crate::utils::token::create_token;
+use axum::http::HeaderMap;
+use axum::http::header::SET_COOKIE;
+use axum::response::IntoResponse;
+use axum::routing::post;
+use axum::{Extension, Json, Router};
+use axum_extra::extract::cookie::Cookie;
+use std::sync::Arc;
+use validator::Validate;
 
 pub fn auth_handler() -> Router {
-    Router::new()
-        .route("/login", post(login_user))
+    Router::new().route("/login", post(login_user))
 }
 
 pub async fn login_user(
@@ -40,12 +39,13 @@ pub async fn login_user(
     ))?;
 
     let password_match = compare_password(&payload.password, &user.password_hash)
-        .map_err(|e| HttpError::bad_request(ErrorMessage::WrongCredentials.to_string()))?;
+        .map_err(|_| HttpError::bad_request(ErrorMessage::WrongCredentials.to_string()))?;
 
     if !password_match {
-        return Err(HttpError::bad_request(ErrorMessage::WrongCredentials.to_string()));
+        return Err(HttpError::bad_request(
+            ErrorMessage::WrongCredentials.to_string(),
+        ));
     }
-
 
     // ✅ aturan bisnis login channel vs role
     let channel = ClientChannel::from_headers(&headers);
@@ -58,9 +58,10 @@ pub async fn login_user(
 
     let token = create_token(
         &user.id.to_string(),
-        &app_state.env.jwt_secret.as_bytes(),
+        app_state.env.jwt_secret.as_bytes(),
         app_state.env.jwt_maxage,
-    ).map_err(|e| HttpError::server_error(e.to_string()))?;
+    )
+    .map_err(|e| HttpError::server_error(e.to_string()))?;
 
     let mut headers = HeaderMap::new();
 
@@ -72,10 +73,11 @@ pub async fn login_user(
         .build();
     headers.append(SET_COOKIE, cookie.to_string().parse().unwrap());
 
-    let satker = app_state.db_client
+    let satker = app_state
+        .db_client
         .find_satker_by_id(user.satker_id)
-    .await
-    .map_err(|e| HttpError::server_error(e.to_string()))?;
+        .await
+        .map_err(|e| HttpError::server_error(e.to_string()))?;
 
     let satker = satker.ok_or(HttpError::unauthorized(
         "Satker tidak di temukan".to_string(),
@@ -89,5 +91,4 @@ pub async fn login_user(
     };
 
     Ok(Json(response))
-
 }

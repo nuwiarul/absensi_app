@@ -1,33 +1,43 @@
 use crate::AppState;
+use crate::constants::{CalendarDayType, HolidayKind, SUPERUSER_SATKER_ID};
+use crate::database::holiday::HolidayRepo;
 use crate::database::satker::SatkerRepo;
+use crate::database::work_calendar::WorkCalendarRepo;
+use crate::database::work_pattern::{WorkPatternRepo, WorkPatternUpsert, pick_effective_pattern};
 use crate::dtos::SuccessResponse;
 use crate::dtos::satker::{CreateSatkerReq, SatkerDto, SatkerResp, SatkersResp, UpdateSatkerReq};
-use crate::error::{ErrorMessage, HttpError};
+use crate::dtos::work_calendar::{
+    GenerateCalendarQuery, GenerateCalendarResp, GenerateCalendarRespData,
+};
+use crate::dtos::work_calendar::{ListCalendarQuery, ListCalendarResp};
+use crate::dtos::work_pattern::{UpsertWorkPatternReq, UpsertWorkPatternResp, WorkPatternsResp};
+use crate::error::HttpError;
 use crate::middleware::auth_middleware::AuthMiddleware;
-use crate::utils::password::hash_password;
+use crate::services::authorization::ensure_can_access_satker;
+use crate::services::calendar::{build_holiday_override_map, weekday_is_work};
+use crate::services::catalog::load_satkers_and_ranks;
+use crate::utils::time_parser::{parse_optional_time_field, parse_time_field};
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::routing::{delete, get, post, put};
 use axum::{Extension, Json, Router};
+use chrono::{Datelike, NaiveDate, NaiveTime, Weekday};
 use std::sync::Arc;
 use uuid::Uuid;
 use validator::Validate;
-use crate::constants::SUPERUSER_SATKER_ID;
-use crate::database::holiday::HolidayRepo;
-use crate::database::work_calendar::WorkCalendarRepo;
-use crate::database::work_pattern::{WorkPatternRepo, pick_effective_pattern, WorkPatternUpsert};
-use crate::dtos::work_calendar::{GenerateCalendarQuery, GenerateCalendarResp, GenerateCalendarRespData};
-use crate::dtos::work_calendar::{ListCalendarQuery, ListCalendarResp};
-use crate::constants::{CalendarDayType, HolidayKind};
-use chrono::{Datelike, Weekday, NaiveTime, NaiveDate};
-use crate::dtos::work_pattern::{UpsertWorkPatternReq, UpsertWorkPatternResp, WorkPatternsResp};
 
 pub fn satker_handler() -> Router {
     Router::new()
         .route("/", get(get_satker))
         .route("/{id}", get(find_satker))
-        .route("/{id}/work-patterns", get(list_work_patterns).post(upsert_work_pattern))
-        .route("/{id}/work-patterns/{effective_from}", delete(delete_work_pattern))
+        .route(
+            "/{id}/work-patterns",
+            get(list_work_patterns).post(upsert_work_pattern),
+        )
+        .route(
+            "/{id}/work-patterns/{effective_from}",
+            delete(delete_work_pattern),
+        )
         .route("/{id}/calendar", get(list_calendar_days))
         .route("/{id}/calendar/generate", post(generate_calendar))
         .route("/create", post(create_satker))
@@ -41,14 +51,7 @@ pub async fn list_calendar_days(
     Path(satker_id): Path<Uuid>,
     Query(q): Query<ListCalendarQuery>,
 ) -> Result<impl IntoResponse, HttpError> {
-    let role = user_claims.user_claims.role;
-    let allowed = role == crate::auth::rbac::UserRole::Superadmin
-        || ((role == crate::auth::rbac::UserRole::SatkerAdmin
-        || role == crate::auth::rbac::UserRole::SatkerHead)
-        && user_claims.user_claims.satker_id == satker_id);
-    if !allowed {
-        return Err(HttpError::unauthorized("forbidden"));
-    }
+    ensure_can_access_satker(&user_claims.user_claims, satker_id)?;
 
     if q.to < q.from {
         return Err(HttpError::bad_request("to: harus >= from"));
@@ -71,7 +74,7 @@ pub async fn create_satker(
     Extension(user_claims): Extension<AuthMiddleware>,
     Json(payload): Json<CreateSatkerReq>,
 ) -> Result<impl IntoResponse, HttpError> {
-    if user_claims.user_claims.role.can_manage_satkers() == false {
+    if !user_claims.user_claims.role.can_manage_satkers() {
         return Err(HttpError::unauthorized("forbidden"));
     }
 
@@ -97,7 +100,7 @@ pub async fn update_satker(
     Path(id): Path<Uuid>,
     Json(payload): Json<UpdateSatkerReq>,
 ) -> Result<impl IntoResponse, HttpError> {
-    if user_claims.user_claims.role.can_manage_satkers() == false {
+    if !user_claims.user_claims.role.can_manage_satkers() {
         return Err(HttpError::unauthorized("forbidden"));
     }
 
@@ -118,12 +121,14 @@ pub async fn delete_satker(
     Extension(user_claims): Extension<AuthMiddleware>,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, HttpError> {
-    if user_claims.user_claims.role.can_manage_satkers() == false {
+    if !user_claims.user_claims.role.can_manage_satkers() {
         return Err(HttpError::unauthorized("forbidden"));
     }
 
     if id == SUPERUSER_SATKER_ID {
-        return Err(HttpError::bad_request("forbidden, superuser satker tidak boleh di hapus".to_string()));
+        return Err(HttpError::bad_request(
+            "forbidden, superuser satker tidak boleh di hapus".to_string(),
+        ));
     }
 
     app_state
@@ -163,31 +168,13 @@ pub async fn get_satker(
     Extension(app_state): Extension<Arc<AppState>>,
     Extension(_user_claims): Extension<AuthMiddleware>,
 ) -> Result<impl IntoResponse, HttpError> {
-    let rows = app_state
-        .db_client
-        .get_satker_all()
-        .await
-        .map_err(|e| HttpError::server_error(e.to_string()))?;
-
-    let satker_dto = SatkerDto::to_rows(&rows);
+    let (satkers, _) = load_satkers_and_ranks(&app_state.db_client).await?;
+    let satker_dto = SatkerDto::to_rows(&satkers);
 
     Ok(Json(SatkersResp {
         status: "200",
         data: satker_dto,
     }))
-}
-
-
-fn weekday_is_work(pattern: &crate::models::SatkerWorkPattern, weekday: Weekday) -> bool {
-    match weekday {
-        Weekday::Mon => pattern.mon_work,
-        Weekday::Tue => pattern.tue_work,
-        Weekday::Wed => pattern.wed_work,
-        Weekday::Thu => pattern.thu_work,
-        Weekday::Fri => pattern.fri_work,
-        Weekday::Sat => pattern.sat_work,
-        Weekday::Sun => pattern.sun_work,
-    }
 }
 
 pub async fn generate_calendar_first(
@@ -196,15 +183,7 @@ pub async fn generate_calendar_first(
     Path(id): Path<Uuid>,
     Query(q): Query<GenerateCalendarQuery>,
 ) -> Result<impl IntoResponse, HttpError> {
-    // Authz: Superadmin any satker; SatkerAdmin/SatkerHead only own satker.
-    let role = user_claims.user_claims.role;
-    let allowed = role.can_manage_satkers() // superadmin
-        || ((role == crate::auth::rbac::UserRole::SatkerAdmin || role == crate::auth::rbac::UserRole::SatkerHead)
-        && user_claims.user_claims.satker_id == id);
-
-    if !allowed {
-        return Err(HttpError::unauthorized("forbidden"));
-    }
+    ensure_can_access_satker(&user_claims.user_claims, id)?;
 
     if q.to < q.from {
         return Err(HttpError::bad_request("to: harus >= from"));
@@ -228,24 +207,14 @@ pub async fn generate_calendar_first(
         .await
         .map_err(|e| HttpError::server_error(e.to_string()))?;
 
-    let mut holiday_by_date: std::collections::HashMap<NaiveDate, crate::models::Holiday> =
-        std::collections::HashMap::new();
-    for h in holidays {
-        // If there are both NATIONAL and SATKER on same date, SATKER should win.
-        let replace = match holiday_by_date.get(&h.holiday_date) {
-            None => true,
-            Some(existing) => existing.scope == crate::constants::HolidayScope::National && h.scope == crate::constants::HolidayScope::Satker,
-        };
-        if replace {
-            holiday_by_date.insert(h.holiday_date, h);
-        }
-    }
+    let holiday_by_date = build_holiday_override_map(holidays);
 
     let mut date = q.from;
     let mut generated: i64 = 0;
     while date <= q.to {
-        let pattern = pick_effective_pattern(&patterns, date)
-            .ok_or_else(|| HttpError::bad_request("work pattern tidak ditemukan untuk tanggal ini"))?;
+        let pattern = pick_effective_pattern(&patterns, date).ok_or_else(|| {
+            HttpError::bad_request("work pattern tidak ditemukan untuk tanggal ini")
+        })?;
 
         let weekday = date.weekday();
         let is_work = weekday_is_work(&pattern, weekday);
@@ -267,13 +236,11 @@ pub async fn generate_calendar_first(
 
         if is_work {
             expected_start = Some(pattern.work_start);
-            expected_end = Some(
-                if day_type == CalendarDayType::HalfDay {
-                    pattern.half_day_end.unwrap_or(pattern.work_end)
-                } else {
-                    pattern.work_end
-                },
-            );
+            expected_end = Some(if day_type == CalendarDayType::HalfDay {
+                pattern.half_day_end.unwrap_or(pattern.work_end)
+            } else {
+                pattern.work_end
+            });
         } else {
             note = Some("LIBUR".to_string());
         }
@@ -309,7 +276,9 @@ pub async fn generate_calendar_first(
             .map_err(|e| HttpError::server_error(e.to_string()))?;
 
         generated += 1;
-        date = date.succ_opt().ok_or_else(|| HttpError::server_error("invalid date"))?;
+        date = date
+            .succ_opt()
+            .ok_or_else(|| HttpError::server_error("invalid date"))?;
     }
 
     Ok(Json(GenerateCalendarResp {
@@ -320,34 +289,13 @@ pub async fn generate_calendar_first(
     }))
 }
 
-fn is_workday(pattern: &crate::models::SatkerWorkPattern, weekday: Weekday) -> bool {
-    match weekday {
-        Weekday::Mon => pattern.mon_work,
-        Weekday::Tue => pattern.tue_work,
-        Weekday::Wed => pattern.wed_work,
-        Weekday::Thu => pattern.thu_work,
-        Weekday::Fri => pattern.fri_work,
-        Weekday::Sat => pattern.sat_work,
-        Weekday::Sun => pattern.sun_work,
-    }
-}
-
-
 pub async fn generate_calendar(
     Extension(app_state): Extension<Arc<AppState>>,
     Extension(user_claims): Extension<AuthMiddleware>,
     Path(satker_id): Path<Uuid>,
     Query(q): Query<GenerateCalendarQuery>,
 ) -> Result<impl IntoResponse, HttpError> {
-    // Authz
-    let role = user_claims.user_claims.role;
-    let allowed = role == crate::auth::rbac::UserRole::Superadmin
-        || ((role == crate::auth::rbac::UserRole::SatkerAdmin
-        || role == crate::auth::rbac::UserRole::SatkerHead)
-        && user_claims.user_claims.satker_id == satker_id);
-    if !allowed {
-        return Err(HttpError::unauthorized("forbidden"));
-    }
+    ensure_can_access_satker(&user_claims.user_claims, satker_id)?;
 
     if q.to < q.from {
         return Err(HttpError::bad_request("to: harus >= from"));
@@ -401,21 +349,7 @@ pub async fn generate_calendar(
         .await
         .map_err(|e| HttpError::server_error(e.to_string()))?;
 
-    let mut holiday_by_date: std::collections::HashMap<NaiveDate, crate::models::Holiday> =
-        std::collections::HashMap::new();
-    for h in holidays {
-        // If there are both NATIONAL and SATKER on same date, SATKER should win.
-        let replace = match holiday_by_date.get(&h.holiday_date) {
-            None => true,
-            Some(existing) => {
-                existing.scope == crate::constants::HolidayScope::National
-                    && h.scope == crate::constants::HolidayScope::Satker
-            }
-        };
-        if replace {
-            holiday_by_date.insert(h.holiday_date, h);
-        }
-    }
+    let holiday_by_date = build_holiday_override_map(holidays);
 
     let mut generated: i64 = 0;
     let mut cur = q.from;
@@ -423,11 +357,12 @@ pub async fn generate_calendar(
         let weekday = cur.weekday();
         let pattern = pick_effective_pattern(&patterns, cur).ok_or_else(|| {
             HttpError::bad_request(format!(
-                "work pattern tidak ditemukan untuk tanggal {}",cur
+                "work pattern tidak ditemukan untuk tanggal {}",
+                cur
             ))
         })?;
 
-        let mut day_type = if is_workday(&pattern, weekday) {
+        let mut day_type = if weekday_is_work(&pattern, weekday) {
             CalendarDayType::Workday
         } else {
             CalendarDayType::Holiday
@@ -441,11 +376,11 @@ pub async fn generate_calendar(
             expected_start = Some(pattern.work_start);
             expected_end = Some(pattern.work_end);
             // Half-day rule: if sat_work and pattern has half_day_end and today is Saturday
-            if weekday == Weekday::Sat {
-                if let Some(half_end) = pattern.half_day_end {
-                    day_type = CalendarDayType::HalfDay;
-                    expected_end = Some(half_end);
-                }
+            if weekday == Weekday::Sat
+                && let Some(half_end) = pattern.half_day_end
+            {
+                day_type = CalendarDayType::HalfDay;
+                expected_end = Some(half_end);
             }
         } else {
             note = Some("Hari libur".to_string());
@@ -463,7 +398,10 @@ pub async fn generate_calendar(
                 HolidayKind::HalfDay => {
                     day_type = CalendarDayType::HalfDay;
                     expected_start = Some(pattern.work_start);
-                    let end = h.half_day_end.or(pattern.half_day_end).unwrap_or(pattern.work_end);
+                    let end = h
+                        .half_day_end
+                        .or(pattern.half_day_end)
+                        .unwrap_or(pattern.work_end);
                     expected_end = Some(end);
                     note = Some(h.name.clone());
                 }
@@ -488,33 +426,12 @@ pub async fn generate_calendar(
     }))
 }
 
-fn parse_time(s: String, field: &str) -> Result<NaiveTime, HttpError> {
-    NaiveTime::parse_from_str(&s, "%H:%M")
-        .or_else(|_| NaiveTime::parse_from_str(&s, "%H:%M:%S"))
-        .map_err(|_| HttpError::bad_request(format!("{}: format jam tidak valid ({})", field, s)))
-}
-
-fn parse_time_opt(s: Option<String>, field: &str) -> Result<Option<NaiveTime>, HttpError> {
-    match s {
-        None => Ok(None),
-        Some(v) => Ok(Some(parse_time(v, field)?)),
-    }
-}
-
 pub async fn list_work_patterns(
     Extension(app_state): Extension<Arc<AppState>>,
     Extension(user_claims): Extension<AuthMiddleware>,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, HttpError> {
-    // Authz: Superadmin any satker; SatkerAdmin/SatkerHead only own satker.
-    let role = user_claims.user_claims.role;
-    let allowed = role.can_manage_satkers()
-        || ((role == crate::auth::rbac::UserRole::SatkerAdmin || role == crate::auth::rbac::UserRole::SatkerHead)
-        && user_claims.user_claims.satker_id == id);
-
-    if !allowed {
-        return Err(HttpError::unauthorized("forbidden"));
-    }
+    ensure_can_access_satker(&user_claims.user_claims, id)?;
 
     let patterns = app_state
         .db_client
@@ -534,18 +451,11 @@ pub async fn upsert_work_pattern(
     Path(id): Path<Uuid>,
     Json(payload): Json<UpsertWorkPatternReq>,
 ) -> Result<impl IntoResponse, HttpError> {
-    // Authz
-    let role = user_claims.user_claims.role;
-    let allowed = role.can_manage_satkers()
-        || ((role == crate::auth::rbac::UserRole::SatkerAdmin || role == crate::auth::rbac::UserRole::SatkerHead)
-        && user_claims.user_claims.satker_id == id);
-    if !allowed {
-        return Err(HttpError::unauthorized("forbidden"));
-    }
+    ensure_can_access_satker(&user_claims.user_claims, id)?;
 
-    let work_start = parse_time(payload.work_start, "work_start")?;
-    let work_end = parse_time(payload.work_end, "work_end")?;
-    let half_day_end = parse_time_opt(payload.half_day_end, "half_day_end")?;
+    let work_start = parse_time_field(&payload.work_start, "work_start")?;
+    let work_end = parse_time_field(&payload.work_end, "work_end")?;
+    let half_day_end = parse_optional_time_field(payload.half_day_end.as_deref(), "half_day_end")?;
 
     if work_end <= work_start {
         return Err(HttpError::bad_request("work_end: harus > work_start"));
@@ -555,7 +465,9 @@ pub async fn upsert_work_pattern(
             return Err(HttpError::bad_request("half_day_end: harus > work_start"));
         }
         if h > work_end {
-            return Err(HttpError::bad_request("half_day_end: tidak boleh > work_end"));
+            return Err(HttpError::bad_request(
+                "half_day_end: tidak boleh > work_end",
+            ));
         }
     }
 
@@ -590,16 +502,9 @@ pub async fn delete_work_pattern(
     Extension(user_claims): Extension<AuthMiddleware>,
     Path((id, effective_from)): Path<(Uuid, String)>,
 ) -> Result<impl IntoResponse, HttpError> {
-    // Authz
-    let role = user_claims.user_claims.role;
-    let allowed = role.can_manage_satkers()
-        || ((role == crate::auth::rbac::UserRole::SatkerAdmin || role == crate::auth::rbac::UserRole::SatkerHead)
-        && user_claims.user_claims.satker_id == id);
-    if !allowed {
-        return Err(HttpError::unauthorized("forbidden"));
-    }
+    ensure_can_access_satker(&user_claims.user_claims, id)?;
 
-    let date = chrono::NaiveDate::parse_from_str(&effective_from, "%Y-%m-%d")
+    let date = NaiveDate::parse_from_str(&effective_from, "%Y-%m-%d")
         .map_err(|_| HttpError::bad_request("effective_from: format harus YYYY-MM-DD"))?;
 
     // Safety rule: hanya boleh hapus work pattern yang paling lama berdasarkan created_at.
@@ -621,7 +526,9 @@ pub async fn delete_work_pattern(
         .ok_or_else(|| HttpError::server_error("work pattern kosong"))?;
 
     if oldest.effective_from != date {
-        return Err(HttpError::unauthorized("hanya boleh menghapus work pattern yang paling lama (berdasarkan created_at)"));
+        return Err(HttpError::unauthorized(
+            "hanya boleh menghapus work pattern yang paling lama (berdasarkan created_at)",
+        ));
     }
 
     let affected = app_state

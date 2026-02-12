@@ -1,13 +1,12 @@
 use super::validate_date;
+use crate::auth::rbac::UserRole;
 use crate::constants::{LeaveStatus, LeaveType};
+use crate::dtos::satker::SatkerDto;
+use crate::dtos::user::UserDto;
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
-use crate::auth::rbac::UserRole;
-use crate::dtos::satker::SatkerDto;
-use crate::dtos::user::UserDto;
-use crate::models::LeaveRequest;
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
 pub struct PendingLeaveDto {
@@ -149,25 +148,17 @@ pub struct LeaveRequestDto {
     pub approver_id: Option<Uuid>,
     pub approver_nrp: Option<String>,
     pub approver_role: Option<UserRole>, // Query: a.role AS "approver_role: UserRole"
-    pub approver_phone: Option<String>, // Perbaikan: alias di SQL tadi tertulis user_phone
+    pub approver_phone: Option<String>,  // Perbaikan: alias di SQL tadi tertulis user_phone
 
     pub decision_note: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
-
 }
 
 #[derive(Debug, Serialize, Clone)]
 pub struct LeaveRequestsResp {
     pub status: &'static str,
     pub data: Vec<LeaveRequestDto>,
-}
-
-
-#[derive(Debug, Serialize, Clone)]
-pub struct CreateLeaveResp {
-    pub status: &'static str,
-    pub data: CreateLeaveDto,
 }
 
 #[derive(Debug, Deserialize, Clone, Validate)]

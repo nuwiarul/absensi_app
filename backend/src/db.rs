@@ -2,7 +2,7 @@ use sqlx::{Pool, Postgres};
 
 #[derive(Debug, Clone)]
 pub struct DBClient {
-    pub pool: Pool<Postgres>
+    pub pool: Pool<Postgres>,
 }
 
 impl DBClient {

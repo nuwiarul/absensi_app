@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM tukin_leave_type_rules WHERE policy_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8e0616ac44168a373e114073c8469ea862c85f7e6eb004aa22dc7489d557f2f6"
+}

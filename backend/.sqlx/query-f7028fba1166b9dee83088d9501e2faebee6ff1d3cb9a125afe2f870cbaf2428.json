@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO user_devices (user_id, device_id, device_model, android_version, app_build, client_version)\n            VALUES ($1, $2, $3, $4, $5, $6)\n            ON CONFLICT (device_id) DO NOTHING\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f7028fba1166b9dee83088d9501e2faebee6ff1d3cb9a125afe2f870cbaf2428"
+}

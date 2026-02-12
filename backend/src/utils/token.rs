@@ -1,21 +1,20 @@
-use std::sync::LazyLock;
-use chrono::{Duration, Utc};
-use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-use crate::auth::rbac::UserRole;
 use crate::error::{ErrorMessage, HttpError};
+use chrono::{Duration, Utc};
+use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode};
+use serde::{Deserialize, Serialize};
+use std::sync::LazyLock;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TokenClaims {
     pub sub: String, // Subject (user_id)
-    pub iat: usize, // Issued At (timestamp)
-    pub exp: usize, // Expires At (timestamp)
+    pub iat: usize,  // Issued At (timestamp)
+    pub exp: usize,  // Expires At (timestamp)
 }
 
 //Constant for default token configuration
 const DEFAULT_ALGORITHM: Algorithm = Algorithm::HS256;
-static DEFAULT_TOKEN_VALIDATION: LazyLock<Validation> = LazyLock::new(|| Validation::new(DEFAULT_ALGORITHM));
+static DEFAULT_TOKEN_VALIDATION: LazyLock<Validation> =
+    LazyLock::new(|| Validation::new(DEFAULT_ALGORITHM));
 
 static HEADER: LazyLock<Header> = LazyLock::new(|| Header::new(DEFAULT_ALGORITHM));
 
@@ -28,9 +27,7 @@ pub fn create_token(
         return Err(jsonwebtoken::errors::ErrorKind::InvalidSubject.into());
     }
 
-
     let now = Utc::now();
-
 
     let claims = TokenClaims {
         sub: user_id.to_string(),
@@ -40,13 +37,9 @@ pub fn create_token(
 
     //use a static header to avoid reconstruction
     encode(&HEADER, &claims, &EncodingKey::from_secret(secret))
-
 }
 
-pub fn decode_token(
-    token: &str,
-    secret: &[u8],
-) -> Result<String, HttpError> {
+pub fn decode_token(token: &str, secret: &[u8]) -> Result<String, HttpError> {
     let decoded = decode::<TokenClaims>(
         token,
         &DecodingKey::from_secret(secret),
@@ -55,6 +48,8 @@ pub fn decode_token(
 
     match decoded {
         Ok(token_data) => Ok(token_data.claims.sub),
-        Err(_) => Err(HttpError::unauthorized(ErrorMessage::InvalidToken.to_string()))
+        Err(_) => Err(HttpError::unauthorized(
+            ErrorMessage::InvalidToken.to_string(),
+        )),
     }
 }

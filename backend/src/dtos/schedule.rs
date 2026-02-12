@@ -1,12 +1,10 @@
+use crate::auth::rbac::UserRole;
+use crate::constants::ScheduleType;
+use crate::middleware::auth_middleware::UserClaims;
 use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
-use crate::auth::rbac::UserRole;
-use crate::constants::ScheduleType;
-use crate::dtos::attendance::AttendanceDto;
-use crate::dtos::leave_request::ListMyLeaveQuery;
-use crate::middleware::auth_middleware::UserClaims;
 
 pub fn can_manage_schedule(user_claims: &UserClaims, satker_id: Uuid) -> bool {
     user_claims.role == UserRole::Superadmin
@@ -20,18 +18,9 @@ pub struct CreateScheduleReq {
     pub schedule_date: NaiveDate,
     pub schedule_type: ScheduleType,
     pub start_time: String,
-    pub end_time:String,
+    pub end_time: String,
     pub notes: Option<String>,
 }
-
-#[derive(Debug, Deserialize)]
-pub struct UpdateScheduleReq {
-    pub schedule_type: Option<ScheduleType>,
-    pub start_time: Option<String>,
-    pub end_time: Option<String>,
-    pub notes: Option<String>,
-}
-
 
 pub fn validate_schedule_query(req: &ScheduleQuery) -> Result<(), ValidationError> {
     if req.to < req.from {
@@ -43,7 +32,7 @@ pub fn validate_schedule_query(req: &ScheduleQuery) -> Result<(), ValidationErro
     Ok(())
 }
 
-#[derive(Debug, Deserialize,Validate)]
+#[derive(Debug, Deserialize, Validate)]
 #[validate(schema(function = "validate_schedule_query"))]
 pub struct ScheduleQuery {
     pub from: NaiveDate,

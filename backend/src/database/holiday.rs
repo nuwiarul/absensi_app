@@ -85,8 +85,8 @@ impl HolidayRepo for DBClient {
             to,
             satker_id
         )
-            .fetch_all(&self.pool)
-            .await?;
+        .fetch_all(&self.pool)
+        .await?;
 
         Ok(rows)
     }
@@ -118,8 +118,8 @@ impl HolidayRepo for DBClient {
                 item.name,
                 item.half_day_end,
             )
-                .execute(&mut *tx)
-                .await?;
+            .execute(&mut *tx)
+            .await?;
 
             total += res.rows_affected() as i64;
         }
@@ -158,8 +158,8 @@ impl HolidayRepo for DBClient {
                     from,
                     to
                 )
-                    .fetch_all(&self.pool)
-                    .await?
+                .fetch_all(&self.pool)
+                .await?
             }
             Some(HolidayScope::Satker) => {
                 let sid = satker_id.ok_or(Error::RowNotFound)?;
@@ -184,8 +184,8 @@ impl HolidayRepo for DBClient {
                     to,
                     sid
                 )
-                    .fetch_all(&self.pool)
-                    .await?
+                .fetch_all(&self.pool)
+                .await?
             }
             None => {
                 // both
@@ -214,8 +214,8 @@ impl HolidayRepo for DBClient {
                             to,
                             sid
                         )
-                            .fetch_all(&self.pool)
-                            .await?
+                        .fetch_all(&self.pool)
+                        .await?
                     }
                     None => {
                         sqlx::query_as!(
@@ -236,8 +236,8 @@ impl HolidayRepo for DBClient {
                             from,
                             to
                         )
-                            .fetch_all(&self.pool)
-                            .await?
+                        .fetch_all(&self.pool)
+                        .await?
                     }
                 }
             }
@@ -268,8 +268,8 @@ impl HolidayRepo for DBClient {
             item.name,
             item.half_day_end,
         )
-            .execute(&self.pool)
-            .await?;
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 
@@ -290,8 +290,8 @@ impl HolidayRepo for DBClient {
             satker_id,
             holiday_date
         )
-            .execute(&self.pool)
-            .await?;
+        .execute(&self.pool)
+        .await?;
         Ok(res.rows_affected())
     }
 }

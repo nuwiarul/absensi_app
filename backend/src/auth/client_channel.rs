@@ -1,5 +1,5 @@
-use axum::http::HeaderMap;
 use crate::auth::rbac::UserRole;
+use axum::http::HeaderMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ClientChannel {

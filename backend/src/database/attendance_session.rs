@@ -130,8 +130,8 @@ impl AttendanceSessionRepo for DBClient {
             session_id,
             now
         )
-            .fetch_one(&self.pool)
-            .await?;
+        .fetch_one(&self.pool)
+        .await?;
 
         Ok(row)
     }
@@ -147,8 +147,8 @@ impl AttendanceSessionRepo for DBClient {
             "#,
             session_id,
         )
-            .fetch_one(&self.pool)
-            .await?;
+        .fetch_one(&self.pool)
+        .await?;
 
         Ok(row)
     }
@@ -181,8 +181,8 @@ impl AttendanceSessionRepo for DBClient {
             manual_note,
             updated_by
         )
-            .execute(&self.pool)
-            .await?;
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
@@ -197,8 +197,8 @@ impl AttendanceSessionRepo for DBClient {
             user_id,
             work_date
         )
-            .execute(&self.pool)
-            .await?;
+        .execute(&self.pool)
+        .await?;
 
         Ok(res.rows_affected())
     }
@@ -219,8 +219,8 @@ impl AttendanceSessionRepo for DBClient {
             user_id,
             work_date
         )
-            .fetch_optional(&self.pool)
-            .await?;
+        .fetch_optional(&self.pool)
+        .await?;
 
         Ok(row)
     }

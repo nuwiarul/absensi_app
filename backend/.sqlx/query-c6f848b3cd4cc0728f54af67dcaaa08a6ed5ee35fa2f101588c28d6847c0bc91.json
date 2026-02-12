@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE duty_schedule_requests\n        SET status = 'REJECTED', reject_reason = $2, decided_by = $3, decided_at = now(), updated_at = now()\n        WHERE id = $1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c6f848b3cd4cc0728f54af67dcaaa08a6ed5ee35fa2f101588c28d6847c0bc91"
+}

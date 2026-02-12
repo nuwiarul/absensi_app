@@ -1,0 +1,39 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                INSERT INTO holidays (scope, satker_id, holiday_date, kind, name, half_day_end)\n                VALUES ($1, $2, $3, $4, $5, $6)\n                ON CONFLICT (scope, satker_id, holiday_date)\n                DO UPDATE SET\n                  kind = EXCLUDED.kind,\n                  name = EXCLUDED.name,\n                  half_day_end = EXCLUDED.half_day_end\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        {
+          "Custom": {
+            "name": "holiday_scope",
+            "kind": {
+              "Enum": [
+                "NATIONAL",
+                "SATKER"
+              ]
+            }
+          }
+        },
+        "Uuid",
+        "Date",
+        {
+          "Custom": {
+            "name": "holiday_kind",
+            "kind": {
+              "Enum": [
+                "HOLIDAY",
+                "HALF_DAY"
+              ]
+            }
+          }
+        },
+        "Text",
+        "Time"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "45cb59ff6ac11c76d3240ac06bc445dd8e0e497891bb970c88418890976e53f6"
+}

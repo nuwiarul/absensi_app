@@ -1,15 +1,16 @@
 use crate::AppState;
 use crate::auth::rbac::UserRole;
-use crate::constants::LeaveType;
 use crate::database::geofence::GeofenceRepo;
 use crate::database::satker::SatkerRepo;
 use crate::dtos::SuccessResponse;
-use crate::dtos::geofence::{CreateGeofenceReq, GeofenceDto, GeofencesResp, UpdateGeofenceReq, can_manage_geofence, can_view_geofence, GeofenceResp};
-use crate::dtos::leave_request::{CreateLeaveDto, CreateLeaveReq};
-use crate::dtos::satker::SatkerDto;
-use crate::dtos::user::UserDto;
+use crate::dtos::geofence::{
+    CreateGeofenceReq, GeofenceDto, GeofenceResp, GeofencesResp, UpdateGeofenceReq,
+    can_manage_geofence, can_view_geofence,
+};
 use crate::error::{ErrorMessage, HttpError};
 use crate::middleware::auth_middleware::AuthMiddleware;
+use crate::services::catalog::load_satkers_and_ranks;
+use crate::services::geofence::ensure_can_manage_geofence;
 use axum::extract::Path;
 use axum::response::IntoResponse;
 use axum::routing::{delete, get, post, put};
@@ -69,35 +70,7 @@ pub async fn update_geofence(
     Path(id): Path<Uuid>,
     Json(payload): Json<UpdateGeofenceReq>,
 ) -> Result<impl IntoResponse, HttpError> {
-    /*
-    if !can_manage_geofence(&user_claims.user_claims, user_claims.user_claims.satker_id) {
-        return Err(HttpError::unauthorized(
-            ErrorMessage::ForbiddenRequest.to_string(),
-        ));
-    }
-
-     */
-
-    if user_claims.user_claims.role != UserRole::Superadmin {
-        if !can_manage_geofence(&user_claims.user_claims, user_claims.user_claims.satker_id) {
-            return Err(HttpError::unauthorized(
-                ErrorMessage::ForbiddenRequest.to_string(),
-            ));
-        }
-        // Pastikan geofence ini memang milik satker user.
-        let row = app_state
-            .db_client
-            .find_geofence(id)
-            .await
-            .map_err(|e| HttpError::server_error(e.to_string()))?;
-
-        let row = row.ok_or(HttpError::bad_request("Geofence not found.".to_string()))?;
-        if row.satker_id != user_claims.user_claims.satker_id {
-            return Err(HttpError::unauthorized(
-                ErrorMessage::ForbiddenRequest.to_string(),
-            ));
-        }
-    }
+    ensure_can_manage_geofence(&app_state.db_client, &user_claims.user_claims, id).await?;
 
     payload
         .validate()
@@ -128,34 +101,7 @@ pub async fn delete_geofence(
     Extension(user_claims): Extension<AuthMiddleware>,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, HttpError> {
-    /*
-    if !can_manage_geofence(&user_claims.user_claims, user_claims.user_claims.satker_id) {
-        return Err(HttpError::unauthorized(
-            ErrorMessage::ForbiddenRequest.to_string(),
-        ));
-    }
-
-     */
-
-    if user_claims.user_claims.role != UserRole::Superadmin {
-        if !can_manage_geofence(&user_claims.user_claims, user_claims.user_claims.satker_id) {
-            return Err(HttpError::unauthorized(
-                ErrorMessage::ForbiddenRequest.to_string(),
-            ));
-        }
-        let row = app_state
-            .db_client
-            .find_geofence(id)
-            .await
-            .map_err(|e| HttpError::server_error(e.to_string()))?;
-
-        let row = row.ok_or(HttpError::bad_request("Geofence not found.".to_string()))?;
-        if row.satker_id != user_claims.user_claims.satker_id {
-            return Err(HttpError::unauthorized(
-                ErrorMessage::ForbiddenRequest.to_string(),
-            ));
-        }
-    }
+    ensure_can_manage_geofence(&app_state.db_client, &user_claims.user_claims, id).await?;
 
     app_state
         .db_client
@@ -195,11 +141,7 @@ pub async fn list_geofence(
             .map_err(|e| HttpError::server_error(e.to_string()))?
     };
 
-    let satkers = app_state
-        .db_client
-        .get_satker_all()
-        .await
-        .map_err(|e| HttpError::server_error(e.to_string()))?;
+    let (satkers, _) = load_satkers_and_ranks(&app_state.db_client).await?;
 
     let geofences_dto = GeofenceDto::to_rows_with_satker(&rows, &satkers);
 
@@ -230,17 +172,19 @@ pub async fn find_geofence(
 
     let row = row.ok_or(HttpError::bad_request("Geofence not found.".to_string()))?;
 
-    if !user_claims.user_claims.role.is_admin() {
-        if row.satker_id != user_claims.user_claims.satker_id {
-            return Err(HttpError::bad_request("Anda berada di satker yang salah".to_string()));
-        }
+    if !user_claims.user_claims.role.is_admin()
+        && row.satker_id != user_claims.user_claims.satker_id
+    {
+        return Err(HttpError::bad_request(
+            "Anda berada di satker yang salah".to_string(),
+        ));
     }
 
     let satker = app_state
-    .db_client
-    .find_satker_by_id(row.satker_id)
-    .await
-    .map_err(|e| HttpError::server_error(e.to_string()))?;
+        .db_client
+        .find_satker_by_id(row.satker_id)
+        .await
+        .map_err(|e| HttpError::server_error(e.to_string()))?;
 
     let satker = satker.ok_or(HttpError::bad_request("Satker not found.".to_string()))?;
 

@@ -1,0 +1,80 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                            SELECT\n                              id,\n                              scope as \"scope: HolidayScope\",\n                              satker_id,\n                              holiday_date,\n                              kind as \"kind: HolidayKind\",\n                              name,\n                              half_day_end\n                            FROM holidays\n                            WHERE holiday_date BETWEEN $1 AND $2\n                              AND (\n                                scope = 'NATIONAL'\n                                OR (scope = 'SATKER' AND satker_id = $3)\n                              )\n                            ORDER BY holiday_date ASC\n                            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "scope: HolidayScope",
+        "type_info": {
+          "Custom": {
+            "name": "holiday_scope",
+            "kind": {
+              "Enum": [
+                "NATIONAL",
+                "SATKER"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "satker_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "holiday_date",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 4,
+        "name": "kind: HolidayKind",
+        "type_info": {
+          "Custom": {
+            "name": "holiday_kind",
+            "kind": {
+              "Enum": [
+                "HOLIDAY",
+                "HALF_DAY"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "half_day_end",
+        "type_info": "Time"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Date",
+        "Date",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "795ad7bf79d681d83d9b226435c35ca7e117661e83f765252824f0fd2ac771fd"
+}

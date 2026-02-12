@@ -1,5 +1,5 @@
-use chrono::NaiveDate;
 use crate::constants::{HolidayKind, HolidayScope};
+use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -81,4 +81,3 @@ pub struct DeleteHolidayResp {
     pub status: String,
     pub data: String,
 }
-

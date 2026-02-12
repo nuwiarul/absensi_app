@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT 1 as one\n        FROM duty_schedules\n        WHERE deleted_at IS NULL\n          AND user_id = $1\n          AND start_at < $3\n          AND end_at > $2\n        LIMIT 1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "one",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "516a2b8e118ddcd15d0193065477ce098fba62013bd5f2d4fd5c6e83cc300411"
+}

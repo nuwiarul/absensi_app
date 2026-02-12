@@ -1,8 +1,7 @@
 use crate::auth::rbac::UserRole;
 use crate::dtos::satker::SatkerDto;
-use crate::dtos::user::UserDto;
 use crate::middleware::auth_middleware::UserClaims;
-use crate::models::{Geofence, Satker, User};
+use crate::models::{Geofence, Satker};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;

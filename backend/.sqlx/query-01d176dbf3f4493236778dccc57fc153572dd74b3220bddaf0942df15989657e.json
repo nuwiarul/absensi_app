@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM attendance_events WHERE session_id = $1 AND event_type = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        {
+          "Custom": {
+            "name": "attendance_event_type",
+            "kind": {
+              "Enum": [
+                "CHECK_IN",
+                "CHECK_OUT"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "01d176dbf3f4493236778dccc57fc153572dd74b3220bddaf0942df15989657e"
+}

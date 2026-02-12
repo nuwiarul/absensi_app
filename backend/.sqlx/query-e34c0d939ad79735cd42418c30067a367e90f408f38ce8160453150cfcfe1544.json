@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE tukin_policies\n        SET\n          effective_from = $2,\n          effective_to = $3,\n          missing_checkout_penalty_pct = $4::DOUBLE PRECISION,\n          late_tolerance_minutes = $5,\n          late_penalty_per_minute_pct = $6,\n          max_daily_penalty_pct = $7,\n          out_of_geofence_penalty_pct = $8,\n          updated_at = now()\n        WHERE id = $1\n        RETURNING id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Date",
+        "Date",
+        "Float8",
+        "Int4",
+        "Float8",
+        "Float8",
+        "Float8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "e34c0d939ad79735cd42418c30067a367e90f408f38ce8160453150cfcfe1544"
+}

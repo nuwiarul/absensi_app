@@ -174,26 +174,20 @@ function LeaveRulesEditor({
         // normalize from API:
         // - jika backend sudah kirim counts_as_present -> pakai
         // - jika tidak -> default true
-        const map = new Map<
-            LeaveType,
-            { credit: number; counts_as_present: boolean }
-        >()
+        const map = new Map<LeaveType, LeaveRule>()
 
-        for (const r of rulesQ.data as any[]) {
-            map.set(r.leave_type, {
-                credit: Number(r.credit ?? 0),
-                counts_as_present: r.counts_as_present ?? true,
-            })
+        for (const r of rulesQ.data) {
+            map.set(r.leave_type, r)
         }
 
         setRows(
             LEAVE_TYPES.map((t) => {
-                const v = map.get(t)
-                return {
-                    leave_type: t,
-                    credit: v?.credit ?? 0,
-                    counts_as_present: v?.counts_as_present ?? true,
-                }
+                    const v = map.get(t)
+                    return {
+                        leave_type: t,
+                        credit: v?.credit ?? 0,
+                        counts_as_present: v?.counts_as_present ?? true,
+                    }
             })
         )
     }, [rulesQ.data])

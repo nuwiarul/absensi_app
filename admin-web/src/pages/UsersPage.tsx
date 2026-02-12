@@ -345,7 +345,7 @@ export default function UsersPage() {
                     setSecurityOpen(v)
                     if (!v) setSecurityUser(null)
                 }}
-                user={securityUser ?? undefined}
+                user={securityUser}
                 mode={securityMode}
             />
         </Card>

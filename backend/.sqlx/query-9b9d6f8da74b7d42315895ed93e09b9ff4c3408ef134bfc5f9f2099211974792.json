@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM satker_work_patterns WHERE satker_id = $1 AND effective_from = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Date"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9b9d6f8da74b7d42315895ed93e09b9ff4c3408ef134bfc5f9f2099211974792"
+}

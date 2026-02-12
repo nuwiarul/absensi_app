@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO attendance_sessions (satker_id, user_id, work_date)\n            VALUES ($1, $2, $3)\n            ON CONFLICT(user_id, work_date) DO UPDATE SET updated_at = NOW()\n            RETURNING id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Date"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "17d3a060dcb354bc4e8e44236cf4ab74dac6fafb188d5e844d91e48035a3387b"
+}

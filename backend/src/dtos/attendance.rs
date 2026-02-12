@@ -1,9 +1,8 @@
+use crate::constants::AttendanceLeaveType;
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
-use crate::constants::AttendanceLeaveType;
-use crate::dtos::attendance_challenge::ChallengeDto;
 
 #[derive(Debug, Deserialize, Clone, Validate)]
 pub struct AttendanceReq {
@@ -31,7 +30,7 @@ pub struct AttendanceReq {
     pub provider: Option<String>,
     pub location_age_ms: Option<i64>,
 
-    pub leave_type: Option<AttendanceLeaveType>,   // atau enum
+    pub leave_type: Option<AttendanceLeaveType>, // atau enum
     pub leave_notes: Option<String>,
 
     /// Jika `true`, user meminta dicatat sebagai apel (laporan saja, tidak mempengaruhi tukin).
@@ -49,7 +48,6 @@ pub struct AttendanceDto {
     pub distance_to_fence_m: Option<f64>,
     pub geofence_name: Option<String>,
 }
-
 
 #[derive(Debug, Serialize)]
 pub struct AttendanceResp {
@@ -78,7 +76,7 @@ pub struct AttendanceSessionTodayResp {
     pub data: AttendanceSessionTodayDto,
 }
 
-#[derive(Debug, Serialize,  Default, sqlx::FromRow)]
+#[derive(Debug, Serialize, Default, sqlx::FromRow)]
 pub struct AttendanceRekapDto {
     pub session_id: Uuid,
     pub work_date: NaiveDate,
@@ -130,7 +128,7 @@ pub fn validate_attendance_query(req: &AttendanceRekapDtoQuery) -> Result<(), Va
     Ok(())
 }
 
-#[derive(Debug, Deserialize,Validate)]
+#[derive(Debug, Deserialize, Validate)]
 #[validate(schema(function = "validate_attendance_query"))]
 pub struct AttendanceRekapDtoQuery {
     pub from: NaiveDate,

@@ -1,0 +1,118 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT ds.id,\n                   ds.satker_id,\n                   s.code AS satker_code,\n                   s.name AS satker_name,\n                   ds.user_id,\n                   u.full_name AS user_full_name,\n                   u.nrp AS user_nrp,\n                   u.phone AS user_phone,\n                   ds.schedule_date,\n                   ds.type as \"schedule_type: ScheduleType\",\n                   ds.start_time,\n                   ds.end_time,\n                   ds.notes,\n                   ds.created_by,\n                   ds.created_at\n            FROM duty_schedules ds\n            JOIN satkers s ON s.id = ds.satker_id\n            JOIN users u ON u.id = ds.user_id\n            WHERE\n                ds.id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "satker_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "satker_code",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "satker_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "user_full_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "user_nrp",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "user_phone",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "schedule_date",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 9,
+        "name": "schedule_type: ScheduleType",
+        "type_info": {
+          "Custom": {
+            "name": "schedule_type",
+            "kind": {
+              "Enum": [
+                "REGULAR",
+                "SHIFT",
+                "ON_CALL",
+                "SPECIAL"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "start_time",
+        "type_info": "Time"
+      },
+      {
+        "ordinal": 11,
+        "name": "end_time",
+        "type_info": "Time"
+      },
+      {
+        "ordinal": 12,
+        "name": "notes",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 13,
+        "name": "created_by",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 14,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "ab6219b71fe47d98cb9618f4472886f813bda958dc73e872f76a8d5d0bcbbeaa"
+}

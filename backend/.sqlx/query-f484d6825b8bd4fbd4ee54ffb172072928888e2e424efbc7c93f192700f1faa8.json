@@ -1,0 +1,33 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO duty_schedules (satker_id, user_id, schedule_date, type, start_time, end_time, notes, created_by)\n        VALUES ($1, $2, $3, $4, $5::time, $6::time, $7, $8)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Date",
+        {
+          "Custom": {
+            "name": "schedule_type",
+            "kind": {
+              "Enum": [
+                "REGULAR",
+                "SHIFT",
+                "ON_CALL",
+                "SPECIAL"
+              ]
+            }
+          }
+        },
+        "Time",
+        "Time",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f484d6825b8bd4fbd4ee54ffb172072928888e2e424efbc7c93f192700f1faa8"
+}

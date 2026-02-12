@@ -1,7 +1,7 @@
+use crate::models::Satker;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
-use crate::models::{Satker, User};
 
 #[derive(Deserialize, Debug, Clone, Validate)]
 pub struct CreateSatkerReq {
@@ -17,7 +17,7 @@ pub struct UpdateSatkerReq {
     pub name: Option<String>,
 }
 
-#[derive(Serialize,Debug, Clone)]
+#[derive(Serialize, Debug, Clone)]
 pub struct SatkerDto {
     pub id: Uuid,
     pub code: String,
@@ -43,24 +43,22 @@ impl SatkerDto {
         rows.iter()
             .find(|r| r.id == id)
             .map(SatkerDto::to_row)
-            .unwrap_or_else(|| {
-                SatkerDto {
-                    id: Uuid::nil(),
-                    code: "".to_string(),
-                    name: "-".to_string(),
-                    is_active: false,
-                }
+            .unwrap_or_else(|| SatkerDto {
+                id: Uuid::nil(),
+                code: "".to_string(),
+                name: "-".to_string(),
+                is_active: false,
             })
     }
 }
 
-#[derive(Serialize, Debug, Clone, )]
+#[derive(Serialize, Debug, Clone)]
 pub struct SatkerResp {
     pub status: &'static str,
     pub data: SatkerDto,
 }
 
-#[derive(Serialize, Debug, Clone, )]
+#[derive(Serialize, Debug, Clone)]
 pub struct SatkersResp {
     pub status: &'static str,
     pub data: Vec<SatkerDto>,

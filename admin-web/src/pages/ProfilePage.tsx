@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button"
 import { apiErrorMessage } from "@/lib/api-error"
 import { getSession, setSession } from "@/lib/auth"
 
-import { AuthedAvatar, invalidateAuthedAvatar } from "@/components/AuthedAvatar"
+import { AuthedAvatar } from "@/components/AuthedAvatar"
+import { invalidateAuthedAvatar } from "@/lib/authed-avatar-cache"
 import { getMe, updateMyProfile, uploadMyPhoto } from "@/features/users/api"
 import type { User } from "@/features/users/types"
 

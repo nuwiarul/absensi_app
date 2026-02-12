@@ -22,7 +22,7 @@ import { apiErrorMessage } from "@/lib/api-error"
 import { getSession } from "@/lib/auth"
 import { adminSetPassword, adminUploadPhoto } from "@/features/users/api"
 import { usersKeys } from "@/features/users/hooks"
-import { invalidateAuthedAvatar } from "@/components/AuthedAvatar"
+import { invalidateAuthedAvatar } from "@/lib/authed-avatar-cache"
 
 const pwSchema = z
   .object({

@@ -1,0 +1,76 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                sh.user_id,\n                u.full_name,\n                u.nrp,\n                u.phone,\n                sh.satker_id,\n                s.name AS satker_name,\n                s.code AS satker_code,\n                sh.active_from,\n                sh.active_to,\n                CASE\n                    WHEN active_to IS NULL THEN 'AKTIF'\n                    ELSE 'RETIRE'\n                END AS status\n            FROM satker_heads sh\n            JOIN users u ON u.id = sh.user_id\n            JOIN satkers s On s.id = sh.satker_id\n            WHERE sh.satker_id = $1\n            ORDER BY active_from DESC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "full_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "nrp",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "phone",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "satker_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "satker_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "satker_code",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "active_from",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 8,
+        "name": "active_to",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 9,
+        "name": "status",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      null
+    ]
+  },
+  "hash": "723d8aee88d43396215c693a1ce74cee231aa969b343c18220b953292be40642"
+}

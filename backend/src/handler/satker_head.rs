@@ -3,7 +3,6 @@ use crate::auth::rbac::UserRole;
 use crate::database::satker_head::SatkerHeadRepo;
 use crate::database::user::UserRepo;
 use crate::dtos::SuccessResponse;
-use crate::dtos::satker::CreateSatkerReq;
 use crate::dtos::satker_head::{SarkerHeadResp, SetHeadReq};
 use crate::error::HttpError;
 use crate::middleware::auth_middleware::AuthMiddleware;
@@ -98,36 +97,30 @@ pub async fn list_satker_head(
     Extension(app_state): Extension<Arc<AppState>>,
     Extension(user_claims): Extension<AuthMiddleware>,
 ) -> Result<impl IntoResponse, HttpError> {
-
-
     if user_claims.user_claims.role != UserRole::Superadmin
         && user_claims.user_claims.role != UserRole::SatkerAdmin
     {
         return Err(HttpError::bad_request("Forbidden".to_string()));
     }
 
-
     let rows = if user_claims.user_claims.role == UserRole::Superadmin {
-        app_state.db_client
+        app_state
+            .db_client
             .list_all_head_satker()
-        .await
-        .map_err(|e| HttpError::server_error(e.to_string()))?
+            .await
+            .map_err(|e| HttpError::server_error(e.to_string()))?
     } else {
-        app_state.db_client
-            .list_head_satker_by_satker_id(
-                user_claims.user_claims.satker_id,
-            ).
-            await
-        .map_err(|e| HttpError::server_error(e.to_string()))?
+        app_state
+            .db_client
+            .list_head_satker_by_satker_id(user_claims.user_claims.satker_id)
+            .await
+            .map_err(|e| HttpError::server_error(e.to_string()))?
     };
-
-
 
     let response = SarkerHeadResp {
         status: "200",
-        data: rows
+        data: rows,
     };
 
     Ok(Json(response))
 }
-

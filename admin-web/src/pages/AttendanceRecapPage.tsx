@@ -422,7 +422,7 @@ function recapKindFromRow(r: any, tz: string): { kind: RecapKind; label: string;
   return { kind: "NORMAL", label: "Normal", detail }
 }
 
-function calendarCellClass(kind: RecapKind) {
+function calendarCellClass(kind: string) {
   // Use subtle backgrounds so text stays readable.
   switch (kind) {
     case "HOLIDAY":
@@ -438,8 +438,6 @@ function calendarCellClass(kind: RecapKind) {
       return "bg-orange-500/10 ring-1 ring-orange-500/30"
     case "TELAT":
       return "bg-yellow-500/10 ring-1 ring-yellow-500/30"
-    case "DUTY":
-      return "bg-sky-500/10 ring-1 ring-sky-500/30"
     case "PULANG_CEPAT":
       return "bg-rose-500/10 ring-1 ring-rose-500/30"
     case "DINAS_LUAR":
@@ -1013,6 +1011,8 @@ export default function AttendanceRecapPage() {
           is_pending_today: isToday,
           has_duty_schedule: true,
           duty_schedule_titles: dutyTitles,
+          is_missing_in: false,
+          is_missing_out: false,
         })
       }
 
@@ -1152,11 +1152,13 @@ export default function AttendanceRecapPage() {
     for (let idx = 0; idx < 42; idx++) {
       const dayNum = idx - offset + 1
       const inMonth = dayNum >= 1 && dayNum <= daysInMonth
-      const d = new Date(y, m, Math.min(Math.max(dayNum, 1), daysInMonth))
       const ymd = ymdLocal(new Date(y, m, dayNum))
 
       // Determine disabled state: outside month or outside selected range
-      const outOfRange = !inMonth || (from && ymd < from) || (to && ymd > to)
+      const outOfRange =
+        !inMonth ||
+        (!!from && ymd < from) ||
+        (!!to && ymd > to)
       const isWeekend = (() => {
         const dow = new Date(`${ymd}T00:00:00`).getDay()
         return dow === 0 || dow === 6
@@ -1226,7 +1228,7 @@ export default function AttendanceRecapPage() {
   const [imgUrl, setImgUrl] = React.useState<string | null>(null)
   const [imgTitle, setImgTitle] = React.useState<string>("")
 
-  const openSelfie = async (title: string, key?: string) => {
+  const openSelfieAsync = async (title: string, key?: string) => {
     if (!key) {
       toast.error("Selfie tidak tersedia")
       return
@@ -1240,6 +1242,10 @@ export default function AttendanceRecapPage() {
     } catch (e: any) {
       toast.error(e?.response?.data?.message ?? "Gagal memuat selfie")
     }
+  }
+
+  const openSelfie = (title: string, objectKey?: string | null) => {
+    void openSelfieAsync(title, objectKey ?? undefined)
   }
 
   React.useEffect(() => {
@@ -1480,7 +1486,11 @@ export default function AttendanceRecapPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Switch id="show-today" checked={showToday} onCheckedChange={setShowToday} />
+            <Switch
+                id="show-today"
+                checked={showToday}
+                onCheckedChange={(value) => setShowToday(Boolean(value))}
+            />
             <Label htmlFor="show-today" className="cursor-pointer">
               Tampilkan hari ini
             </Label>
@@ -2020,7 +2030,7 @@ function recapKindFromRow(r: any, tz: string): { kind: RecapKind; label: string;
   return { kind: "NORMAL", label: "Normal", detail }
 }
 
-function calendarCellClass(kind: RecapKind) {
+function calendarCellClass(kind: string) {
   // Use subtle backgrounds so text stays readable.
   switch (kind) {
     case "HOLIDAY":

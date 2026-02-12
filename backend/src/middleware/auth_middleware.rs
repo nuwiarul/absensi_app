@@ -90,7 +90,9 @@ pub async fn auth_middleware(
         .await
         .map_err(|_| HttpError::server_error(ErrorMessage::ServerError.to_string()))?;
 
-    let satker = satker.ok_or(HttpError::server_error(ErrorMessage::SatkerNoLonger.to_string()))?;
+    let satker = satker.ok_or(HttpError::server_error(
+        ErrorMessage::SatkerNoLonger.to_string(),
+    ))?;
 
     let user_claims = UserClaims {
         user_id: user.id,
@@ -98,8 +100,11 @@ pub async fn auth_middleware(
         role: user.role,
     };
 
-    req.extensions_mut()
-        .insert(AuthMiddleware { user_claims, user, satker });
+    req.extensions_mut().insert(AuthMiddleware {
+        user_claims,
+        user,
+        satker,
+    });
 
     Ok(next.run(req).await)
 }

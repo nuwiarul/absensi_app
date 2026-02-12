@@ -1,0 +1,62 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n              tipe as \"tipe: LeaveType\",\n              start_date,\n              end_date\n            FROM leave_requests\n            WHERE user_id = $1\n              AND status = $2\n              AND NOT (end_date < $3 OR start_date > $4)\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "tipe: LeaveType",
+        "type_info": {
+          "Custom": {
+            "name": "leave_type",
+            "kind": {
+              "Enum": [
+                "IJIN",
+                "SAKIT",
+                "CUTI",
+                "DINAS_LUAR"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "start_date",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 2,
+        "name": "end_date",
+        "type_info": "Date"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        {
+          "Custom": {
+            "name": "leave_status",
+            "kind": {
+              "Enum": [
+                "DRAFT",
+                "SUBMITTED",
+                "APPROVED",
+                "REJECTED",
+                "CANCELLED"
+              ]
+            }
+          }
+        },
+        "Date",
+        "Date"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "16d4ed3e036eae7f56f117d5ea3a7a8373e7182652c56478a6178c3b7acb44a2"
+}

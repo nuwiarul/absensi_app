@@ -34,12 +34,12 @@ pub async fn create_schedule(
         .validate()
         .map_err(|e| HttpError::bad_request(format!("validate error: {}", e)))?;
 
-    if user_claims.user_claims.role != UserRole::Superadmin {
-        if user_claims.user_claims.satker_id != satker_id {
-            return Err(HttpError::bad_request(
-                "user bukan anggota satker ini / tidak aktif".to_string(),
-            ));
-        }
+    if user_claims.user_claims.role != UserRole::Superadmin
+        && user_claims.user_claims.satker_id != satker_id
+    {
+        return Err(HttpError::bad_request(
+            "user bukan anggota satker ini / tidak aktif".to_string(),
+        ));
     }
 
     let start_time = payload.start_time.parse::<NaiveTime>().ok();
@@ -89,7 +89,8 @@ pub async fn list_satker_schedules(
             query_params.from,
             query_params.to,
         )
-        .await?.into_response());
+        .await?
+        .into_response());
     }
 
     if !can_manage_schedule(&user_claims.user_claims, satker_id) {

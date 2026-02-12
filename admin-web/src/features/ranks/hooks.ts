@@ -1,5 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { toast } from "sonner"
+import { useQuery } from "@tanstack/react-query"
+import { useToastMutation } from "@/hooks/use-toast-mutation"
 import { createRank, deleteRank, fetchRanks, updateRank } from "./api"
 import type { CreateRankReq, UpdateRankReq } from "./types"
 
@@ -12,34 +12,25 @@ export function useRanks() {
 }
 
 export function useCreateRank() {
-  const qc = useQueryClient()
-  return useMutation({
+  return useToastMutation({
     mutationFn: (body: CreateRankReq) => createRank(body),
-    onSuccess: () => {
-      toast.success("Pangkat/Golongan berhasil dibuat")
-      qc.invalidateQueries({ queryKey: ranksKeys.all })
-    },
+    successMessage: "Pangkat/Golongan berhasil dibuat",
+    invalidateQueries: [ranksKeys.all],
   })
 }
 
 export function useUpdateRank() {
-  const qc = useQueryClient()
-  return useMutation({
+  return useToastMutation({
     mutationFn: ({ id, body }: { id: string; body: UpdateRankReq }) => updateRank(id, body),
-    onSuccess: () => {
-      toast.success("Pangkat/Golongan berhasil diupdate")
-      qc.invalidateQueries({ queryKey: ranksKeys.all })
-    },
+    successMessage: "Pangkat/Golongan berhasil diupdate",
+    invalidateQueries: [ranksKeys.all],
   })
 }
 
 export function useDeleteRank() {
-  const qc = useQueryClient()
-  return useMutation({
+  return useToastMutation({
     mutationFn: (id: string) => deleteRank(id),
-    onSuccess: () => {
-      toast.success("Pangkat/Golongan berhasil dihapus")
-      qc.invalidateQueries({ queryKey: ranksKeys.all })
-    },
+    successMessage: "Pangkat/Golongan berhasil dihapus",
+    invalidateQueries: [ranksKeys.all],
   })
 }

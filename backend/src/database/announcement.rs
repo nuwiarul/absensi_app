@@ -7,17 +7,31 @@ use crate::dtos::announcement::{AnnouncementDto, CreateAnnouncementReq, UpdateAn
 
 #[async_trait]
 pub trait AnnouncementRepo {
-    async fn list_visible_announcements(&self, satker_id: Uuid) -> Result<Vec<AnnouncementDto>, Error>;
-    async fn list_manageable_announcements(&self, role_is_superadmin: bool, satker_id: Uuid) -> Result<Vec<AnnouncementDto>, Error>;
+    async fn list_visible_announcements(
+        &self,
+        satker_id: Uuid,
+    ) -> Result<Vec<AnnouncementDto>, Error>;
+    async fn list_manageable_announcements(
+        &self,
+        role_is_superadmin: bool,
+        satker_id: Uuid,
+    ) -> Result<Vec<AnnouncementDto>, Error>;
     async fn find_announcement_by_id(&self, id: Uuid) -> Result<Option<AnnouncementDto>, Error>;
-    async fn create_announcement(&self, created_by: Uuid, req: CreateAnnouncementReq) -> Result<Uuid, Error>;
+    async fn create_announcement(
+        &self,
+        created_by: Uuid,
+        req: CreateAnnouncementReq,
+    ) -> Result<Uuid, Error>;
     async fn update_announcement(&self, id: Uuid, req: UpdateAnnouncementReq) -> Result<(), Error>;
     async fn deactivate_announcement(&self, id: Uuid) -> Result<(), Error>;
 }
 
 #[async_trait]
 impl AnnouncementRepo for DBClient {
-    async fn list_visible_announcements(&self, satker_id: Uuid) -> Result<Vec<AnnouncementDto>, Error> {
+    async fn list_visible_announcements(
+        &self,
+        satker_id: Uuid,
+    ) -> Result<Vec<AnnouncementDto>, Error> {
         let rows = sqlx::query_as!(
             AnnouncementDto,
             r#"
@@ -53,7 +67,11 @@ impl AnnouncementRepo for DBClient {
         Ok(rows)
     }
 
-    async fn list_manageable_announcements(&self, role_is_superadmin: bool, satker_id: Uuid) -> Result<Vec<AnnouncementDto>, Error> {
+    async fn list_manageable_announcements(
+        &self,
+        role_is_superadmin: bool,
+        satker_id: Uuid,
+    ) -> Result<Vec<AnnouncementDto>, Error> {
         if role_is_superadmin {
             let rows = sqlx::query_as!(
                 AnnouncementDto,
@@ -143,7 +161,11 @@ impl AnnouncementRepo for DBClient {
         Ok(row)
     }
 
-    async fn create_announcement(&self, created_by: Uuid, req: CreateAnnouncementReq) -> Result<Uuid, Error> {
+    async fn create_announcement(
+        &self,
+        created_by: Uuid,
+        req: CreateAnnouncementReq,
+    ) -> Result<Uuid, Error> {
         let is_active = req.is_active.unwrap_or(true);
         let row = sqlx::query!(
             r#"

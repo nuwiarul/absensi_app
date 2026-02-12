@@ -1,20 +1,12 @@
-use std::str::FromStr;
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use uuid::Uuid;
 
 pub const SUPERUSER_SATKER_ID: Uuid = Uuid::from_bytes([
-    0x11, 0x11, 0x11, 0x11,
-    0x11, 0x11,
-    0x11, 0x11,
-    0x11, 0x11,
-    0x11, 0x11, 0x11, 0x11, 0x11, 0x11
+    0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
 ]);
 pub const SUPERUSER_USER_ID: Uuid = Uuid::from_bytes([
-    0x11, 0x11, 0x11, 0x11,
-    0x11, 0x11,
-    0x11, 0x11,
-    0x11, 0x11,
-    0x11, 0x11, 0x11, 0x11, 0x11, 0x11
+    0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
 ]);
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, sqlx::Type, Hash)]
@@ -44,7 +36,7 @@ impl FromStr for LeaveType {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, sqlx::Type)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 #[sqlx(type_name = "leave_status", rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum LeaveStatus  {
+pub enum LeaveStatus {
     Draft,
     Submitted,
     Approved,
@@ -66,6 +58,7 @@ impl FromStr for LeaveStatus {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum AttendanceStatus {
@@ -88,8 +81,11 @@ impl FromStr for AttendanceStatus {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, sqlx::Type)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-#[sqlx(type_name = "attendance_event_type", rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum AttendanceEventType  {
+#[sqlx(
+    type_name = "attendance_event_type",
+    rename_all = "SCREAMING_SNAKE_CASE"
+)]
+pub enum AttendanceEventType {
     CheckIn,
     CheckOut,
 }
@@ -128,9 +124,12 @@ impl FromStr for ScheduleType {
     }
 }
 
-#[derive(Debug, Copy, Serialize,  Deserialize, Clone, PartialEq, Eq, sqlx::Type)]
+#[derive(Debug, Copy, Serialize, Deserialize, Clone, PartialEq, Eq, sqlx::Type)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-#[sqlx(type_name = "attendance_leave_type", rename_all = "SCREAMING_SNAKE_CASE")]
+#[sqlx(
+    type_name = "attendance_leave_type",
+    rename_all = "SCREAMING_SNAKE_CASE"
+)]
 pub enum AttendanceLeaveType {
     Normal,
     JadwalDinas,
@@ -199,4 +198,3 @@ impl FromStr for CalendarDayType {
         }
     }
 }
-

@@ -4,17 +4,17 @@ use crate::database::duty_schedule::DutyScheduleRepo;
 use crate::database::satker_head::SatkerHeadRepo;
 use crate::dtos::SuccessResponse;
 use crate::dtos::duty_schedule::{
-    can_manage_duty_schedules, CreateDutyScheduleReq, DutySchedulesResp, ListDutySchedulesQuery,
-    UpdateDutyScheduleReq,
+    CreateDutyScheduleReq, DutySchedulesResp, ListDutySchedulesQuery, UpdateDutyScheduleReq,
+    can_manage_duty_schedules,
 };
 use crate::error::HttpError;
 use crate::middleware::auth_middleware::AuthMiddleware;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
-use axum::routing::{delete, get, post, put};
+use axum::routing::{get, put};
 use axum::{Extension, Json, Router};
-use std::sync::Arc;
 use chrono::{Datelike, TimeZone, Utc};
+use std::sync::Arc;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -132,7 +132,9 @@ pub async fn create_duty_schedule(
         ));
     }
 
-    let schedule_type = payload.schedule_type.unwrap_or(crate::constants::ScheduleType::Regular);
+    let schedule_type = payload
+        .schedule_type
+        .unwrap_or(crate::constants::ScheduleType::Regular);
 
     app_state
         .db_client

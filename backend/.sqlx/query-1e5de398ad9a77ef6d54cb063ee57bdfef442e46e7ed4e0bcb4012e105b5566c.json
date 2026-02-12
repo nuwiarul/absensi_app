@@ -1,0 +1,125 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n              lr.id,\n              lr.satker_id,\n              s.code AS satker_code,\n              s.name AS satker_name,\n              lr.user_id,\n              u.full_name as requester_name,\n              u.nrp as requester_nrp,\n              lr.tipe as \"tipe: LeaveType\",\n              lr.start_date, lr.end_date, lr.reason,\n              lr.status as \"status: LeaveStatus\",\n              lr.submitted_at, lr.created_at\n            FROM leave_requests lr\n            JOIN users u ON u.id = lr.user_id\n            JOIN satkers s ON s.id = lr.satker_id\n            WHERE\n                lr.status = 'SUBMITTED' AND\n                lr.satker_id = $1\n            ORDER BY lr.created_at ASC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "satker_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "satker_code",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "satker_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "requester_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "requester_nrp",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "tipe: LeaveType",
+        "type_info": {
+          "Custom": {
+            "name": "leave_type",
+            "kind": {
+              "Enum": [
+                "IJIN",
+                "SAKIT",
+                "CUTI",
+                "DINAS_LUAR"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "start_date",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 9,
+        "name": "end_date",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 10,
+        "name": "reason",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "status: LeaveStatus",
+        "type_info": {
+          "Custom": {
+            "name": "leave_status",
+            "kind": {
+              "Enum": [
+                "DRAFT",
+                "SUBMITTED",
+                "APPROVED",
+                "REJECTED",
+                "CANCELLED"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "submitted_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 13,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "1e5de398ad9a77ef6d54cb063ee57bdfef442e46e7ed4e0bcb4012e105b5566c"
+}

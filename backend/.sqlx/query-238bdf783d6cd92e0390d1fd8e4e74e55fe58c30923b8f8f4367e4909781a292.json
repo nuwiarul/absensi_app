@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO duty_schedule_requests (\n                satker_id, user_id, start_at, end_at,\n                schedule_type, title, note, status\n            )\n            VALUES ($1, $2, $3, $4, $5, $6, $7, 'SUBMITTED')\n            RETURNING id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Timestamptz",
+        "Timestamptz",
+        {
+          "Custom": {
+            "name": "schedule_type",
+            "kind": {
+              "Enum": [
+                "REGULAR",
+                "SHIFT",
+                "ON_CALL",
+                "SPECIAL"
+              ]
+            }
+          }
+        },
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "238bdf783d6cd92e0390d1fd8e4e74e55fe58c30923b8f8f4367e4909781a292"
+}

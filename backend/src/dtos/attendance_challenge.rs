@@ -1,7 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::dtos::geofence::GeofenceDto;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ChallengePayload {

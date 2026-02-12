@@ -1,0 +1,42 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n          work_date,\n          occurred_at,\n          kind,\n          source_event\n        FROM attendance_apel\n        WHERE user_id = $1\n          AND work_date >= $2\n          AND work_date <= $3\n        ORDER BY work_date DESC, occurred_at DESC\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "work_date",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 1,
+        "name": "occurred_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "kind",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "source_event",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Date",
+        "Date"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "ce4f20b6356937d511132718c8b4919698c02d785cf16f98e8e4b0839eddd1c9"
+}

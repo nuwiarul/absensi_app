@@ -1,6 +1,5 @@
-use crate::auth::rbac::UserRole;
 use crate::db::DBClient;
-use crate::models::{Satker, User};
+use crate::models::Satker;
 use async_trait::async_trait;
 use sqlx::Error;
 use uuid::Uuid;

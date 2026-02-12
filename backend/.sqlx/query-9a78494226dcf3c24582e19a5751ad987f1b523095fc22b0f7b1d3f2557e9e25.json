@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT 1 as \"one!\"\n        FROM leave_requests\n        WHERE user_id = $1\n          AND status = 'APPROVED'\n          AND start_date <= $2\n          AND end_date >= $2\n        LIMIT 1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "one!",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Date"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "9a78494226dcf3c24582e19a5751ad987f1b523095fc22b0f7b1d3f2557e9e25"
+}

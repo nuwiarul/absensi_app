@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE satkers\n            SET code = COALESCE($2, code),\n                name = COALESCE($3, name),\n                updated_at = NOW()\n            WHERE id = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "12a32899670ad8ddca0e0f48deb8d14f41ab48a7d5f3d2daa52a0ea6115b698f"
+}

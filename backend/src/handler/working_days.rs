@@ -1,20 +1,21 @@
 use std::sync::Arc;
 
 use axum::{
-    Extension,
-    Json,
-    Router,
+    Extension, Json, Router,
     extract::{Path, Query},
-    routing::{get, put, delete},
+    routing::{get, put},
 };
-use chrono::{NaiveDate, NaiveTime};
+use chrono::NaiveDate;
 use uuid::Uuid;
 
-use crate::{AppState, error::HttpError, middleware::auth_middleware::AuthMiddleware};
-use crate::database::work_calendar::WorkCalendarRepo;
-use crate::dtos::working_days::{ListWorkingDaysQuery, UpsertWorkingDayReq, WorkingDayDto, WorkingDayResp, WorkingDaysResp};
 use crate::auth::rbac::UserRole;
 use crate::constants::CalendarDayType;
+use crate::database::work_calendar::WorkCalendarRepo;
+use crate::dtos::working_days::{
+    ListWorkingDaysQuery, UpsertWorkingDayReq, WorkingDayDto, WorkingDayResp, WorkingDaysResp,
+};
+use crate::utils::time_parser::parse_optional_time_field;
+use crate::{AppState, error::HttpError, middleware::auth_middleware::AuthMiddleware};
 
 #[derive(serde::Serialize)]
 struct StatusOnlyResp {
@@ -26,19 +27,10 @@ fn parse_date(s: &str) -> Result<NaiveDate, HttpError> {
         .map_err(|_| HttpError::bad_request("work_date: format harus YYYY-MM-DD"))
 }
 
-fn parse_time_opt(v: &Option<String>, field: &str) -> Result<Option<NaiveTime>, HttpError> {
-    match v {
-        None => Ok(None),
-        Some(s) => NaiveTime::parse_from_str(s, "%H:%M")
-            .or_else(|_| NaiveTime::parse_from_str(s, "%H:%M:%S"))
-            .map(Some)
-            .map_err(|_| HttpError::bad_request(format!("{}: format jam tidak valid (HH:MM atau HH:MM:SS)", field))),
-    }
-}
-
 fn can_manage(user: &crate::middleware::auth_middleware::UserClaims, satker_id: Uuid) -> bool {
     user.role == UserRole::Superadmin
-        || ((user.role == UserRole::SatkerAdmin || user.role == UserRole::SatkerHead) && user.satker_id == satker_id)
+        || ((user.role == UserRole::SatkerAdmin || user.role == UserRole::SatkerHead)
+            && user.satker_id == satker_id)
 }
 
 fn can_view(user: &crate::middleware::auth_middleware::UserClaims, satker_id: Uuid) -> bool {
@@ -83,8 +75,9 @@ pub async fn upsert_working_day(
     let work_date = parse_date(&work_date)?;
 
     // Minimal validation for time fields depending on day_type.
-    let expected_start = parse_time_opt(&payload.expected_start, "expected_start")?;
-    let expected_end = parse_time_opt(&payload.expected_end, "expected_end")?;
+    let expected_start =
+        parse_optional_time_field(payload.expected_start.as_deref(), "expected_start")?;
+    let expected_end = parse_optional_time_field(payload.expected_end.as_deref(), "expected_end")?;
 
     match payload.day_type {
         CalendarDayType::Holiday => {
@@ -97,7 +90,9 @@ pub async fn upsert_working_day(
                 ));
             }
             if expected_end.unwrap() <= expected_start.unwrap() {
-                return Err(HttpError::bad_request("expected_end harus > expected_start"));
+                return Err(HttpError::bad_request(
+                    "expected_end harus > expected_start",
+                ));
             }
         }
     }
@@ -157,7 +152,8 @@ pub async fn delete_working_day(
 }
 
 pub fn working_days_handler() -> Router {
-    Router::new()
-        .route("/", get(list_working_days))
-        .route("/{satker_id}/{work_date}", put(upsert_working_day).delete(delete_working_day))
+    Router::new().route("/", get(list_working_days)).route(
+        "/{satker_id}/{work_date}",
+        put(upsert_working_day).delete(delete_working_day),
+    )
 }

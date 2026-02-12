@@ -1,4 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
+import { useToastMutation } from "@/hooks/use-toast-mutation"
 import { toast } from "sonner"
 
 import { apiErrorMessage } from "@/lib/api-error"
@@ -12,16 +13,14 @@ export function useSatkerHeads() {
 }
 
 export function useSetSatkerHead() {
-  const qc = useQueryClient()
-
-  return useMutation({
+  return useToastMutation({
     mutationFn: ({ satkerId, userId }: { satkerId: string; userId: string }) =>
       setSatkerHead(satkerId, { user_id: userId }),
-    onSuccess: () => {
-      toast.success("Satker head berhasil di-set")
-      qc.invalidateQueries({ queryKey: ["satker-heads"] })
-      qc.invalidateQueries({ queryKey: ["users"] })
-    },
+    successMessage: "Satker head berhasil di-set",
+    invalidateQueries: [
+      ["satker-heads"],
+      ["users"],
+    ],
     onError: (e) => {
       toast.error(apiErrorMessage(e, { title: "Gagal set satker head" }))
     },

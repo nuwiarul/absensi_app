@@ -1,0 +1,190 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                id,\n                session_id,\n                satker_id,\n                user_id,\n                event_type AS \"event_type: AttendanceEventType\",\n                occurred_at,\n                latitude,\n                longitude,\n                accuracy_meters,\n                geofence_id,\n                distance_to_fence_m,\n                selfie_object_key,\n                liveness_score,\n                face_match_score,\n                device_id,\n                client_version,\n                server_challenge_id,\n                created_at,\n                device_model,\n                android_version,\n                app_build,\n                attendance_leave_type AS \"attendance_leave_type: AttendanceLeaveType\",\n                attendance_leave_notes\n            FROM attendance_events\n            WHERE session_id = $1 AND event_type = $2\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "session_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "satker_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "event_type: AttendanceEventType",
+        "type_info": {
+          "Custom": {
+            "name": "attendance_event_type",
+            "kind": {
+              "Enum": [
+                "CHECK_IN",
+                "CHECK_OUT"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "occurred_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 6,
+        "name": "latitude",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 7,
+        "name": "longitude",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 8,
+        "name": "accuracy_meters",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 9,
+        "name": "geofence_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 10,
+        "name": "distance_to_fence_m",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 11,
+        "name": "selfie_object_key",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
+        "name": "liveness_score",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 13,
+        "name": "face_match_score",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 14,
+        "name": "device_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 15,
+        "name": "client_version",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 16,
+        "name": "server_challenge_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 17,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 18,
+        "name": "device_model",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 19,
+        "name": "android_version",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 20,
+        "name": "app_build",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 21,
+        "name": "attendance_leave_type: AttendanceLeaveType",
+        "type_info": {
+          "Custom": {
+            "name": "attendance_leave_type",
+            "kind": {
+              "Enum": [
+                "NORMAL",
+                "JADWAL_DINAS",
+                "DINAS_LUAR",
+                "WFA",
+                "WFH",
+                "IJIN",
+                "SAKIT"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 22,
+        "name": "attendance_leave_notes",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        {
+          "Custom": {
+            "name": "attendance_event_type",
+            "kind": {
+              "Enum": [
+                "CHECK_IN",
+                "CHECK_OUT"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "1ff6442b26d7004b7c96e84130b6a5dc4a290e8b7ecdceeabbadb9f572fffab0"
+}

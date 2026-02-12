@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE attendance_sessions\n            SET\n              check_in_at = $2,\n              check_out_at = $3,\n              status = CASE WHEN $3::timestamptz IS NULL THEN 'OPEN' ELSE 'CLOSED' END,\n              is_manual = TRUE,\n              manual_note = $4,\n              manual_updated_by = $5,\n              manual_updated_at = NOW(),\n              updated_at = NOW()\n            WHERE id = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamptz",
+        "Timestamptz",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e08650ff67fb0ca7b51389355af49e162cd59e40525234bc31d6ef902c1bcc98"
+}

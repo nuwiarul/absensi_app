@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                INSERT INTO tukin_leave_type_rules (policy_id, leave_type, credit, counts_as_present)\n                VALUES ($1, $2, $3::DOUBLE PRECISION, $4)\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        {
+          "Custom": {
+            "name": "leave_type",
+            "kind": {
+              "Enum": [
+                "IJIN",
+                "SAKIT",
+                "CUTI",
+                "DINAS_LUAR"
+              ]
+            }
+          }
+        },
+        "Float8",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1cfd93f5d54ccd1e435e43b9ef68df8a3bbcd6e470fba8d1c78f292da72f3eee"
+}

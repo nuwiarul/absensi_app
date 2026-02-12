@@ -2,7 +2,7 @@ use crate::auth::rbac::UserRole;
 use crate::constants::{LeaveStatus, LeaveType};
 use crate::db::DBClient;
 use crate::dtos::leave_request::{LeaveRequestDto, PendingLeaveDto};
-use crate::models::{LeaveRequest, Satker};
+use crate::models::LeaveRequest;
 use async_trait::async_trait;
 use chrono::NaiveDate;
 use sqlx::Error;
@@ -146,8 +146,8 @@ impl LeaveRequestRepo for DBClient {
             user_id,
             note
         )
-            .execute(&self.pool)
-            .await?;
+        .execute(&self.pool)
+        .await?;
 
         Ok(result.rows_affected())
     }
@@ -463,8 +463,8 @@ impl LeaveRequestRepo for DBClient {
             from,
             to
         )
-            .fetch_all(&self.pool)
-            .await?;
+        .fetch_all(&self.pool)
+        .await?;
 
         Ok(rows)
     }
@@ -518,8 +518,8 @@ impl LeaveRequestRepo for DBClient {
             from,
             to
         )
-            .fetch_all(&self.pool)
-            .await?;
+        .fetch_all(&self.pool)
+        .await?;
 
         Ok(rows)
     }
@@ -542,8 +542,8 @@ impl LeaveRequestRepo for DBClient {
             user_id,
             date
         )
-            .fetch_optional(&self.pool)
-            .await?;
+        .fetch_optional(&self.pool)
+        .await?;
 
         Ok(row.is_some())
     }

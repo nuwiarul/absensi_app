@@ -23,15 +23,13 @@ impl UserRole {
     /// - SATKER_ADMIN: can create SATKER_HEAD/MEMBER (cannot create SATKER_ADMIN)
     pub fn can_create_user_role(&self, target: UserRole) -> bool {
         match self {
-            UserRole::Superadmin => matches!(target, UserRole::SatkerAdmin | UserRole::SatkerHead | UserRole::Member),
+            UserRole::Superadmin => matches!(
+                target,
+                UserRole::SatkerAdmin | UserRole::SatkerHead | UserRole::Member
+            ),
             UserRole::SatkerAdmin => matches!(target, UserRole::SatkerHead | UserRole::Member),
             _ => false,
         }
-    }
-
-    /// Authorization for listing satkers.
-    pub fn can_list_satkers(&self) -> bool {
-        matches!(self, UserRole::Superadmin | UserRole::SatkerAdmin)
     }
 
     /// Authorization for setting satker head.
@@ -40,16 +38,20 @@ impl UserRole {
     }
 
     pub fn can_approve_leave(&self) -> bool {
-        matches!(self, UserRole::Superadmin | UserRole::SatkerHead | UserRole::SatkerAdmin)
+        matches!(
+            self,
+            UserRole::Superadmin | UserRole::SatkerHead | UserRole::SatkerAdmin
+        )
     }
 
     pub fn can_view_leave(&self) -> bool {
-        matches!(self, UserRole::Superadmin | UserRole::SatkerHead | UserRole::SatkerAdmin)
+        matches!(
+            self,
+            UserRole::Superadmin | UserRole::SatkerHead | UserRole::SatkerAdmin
+        )
     }
 
     pub fn is_admin(&self) -> bool {
         matches!(self, UserRole::Superadmin | UserRole::SatkerAdmin)
     }
-
-
 }

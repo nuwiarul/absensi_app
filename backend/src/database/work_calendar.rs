@@ -1,10 +1,10 @@
+use crate::constants::CalendarDayType;
 use crate::db::DBClient;
+use crate::models::SatkerCalendarDay;
 use async_trait::async_trait;
 use chrono::{NaiveDate, NaiveTime};
 use sqlx::Error;
 use uuid::Uuid;
-use crate::constants::CalendarDayType;
-use crate::models::SatkerCalendarDay;
 
 #[async_trait]
 pub trait WorkCalendarRepo {
@@ -25,11 +25,8 @@ pub trait WorkCalendarRepo {
         to: NaiveDate,
     ) -> Result<Vec<SatkerCalendarDay>, Error>;
 
-    async fn delete_calendar_day(
-        &self,
-        satker_id: Uuid,
-        work_date: NaiveDate,
-    ) -> Result<(), Error>;
+    async fn delete_calendar_day(&self, satker_id: Uuid, work_date: NaiveDate)
+    -> Result<(), Error>;
 }
 
 #[async_trait]
@@ -92,8 +89,8 @@ impl WorkCalendarRepo for DBClient {
             from,
             to
         )
-            .fetch_all(&self.pool)
-            .await?;
+        .fetch_all(&self.pool)
+        .await?;
 
         Ok(rows)
     }
@@ -108,8 +105,8 @@ impl WorkCalendarRepo for DBClient {
             satker_id,
             work_date
         )
-            .execute(&self.pool)
-            .await?;
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }

@@ -33,7 +33,10 @@ pub trait GeofenceRepo {
 
     async fn find_geofence(&self, id: Uuid) -> Result<Option<Geofence>, Error>;
 
-    async fn list_active_geofences_by_satker(&self, satker_id: Uuid) -> Result<Vec<Geofence>, Error>;
+    async fn list_active_geofences_by_satker(
+        &self,
+        satker_id: Uuid,
+    ) -> Result<Vec<Geofence>, Error>;
 }
 
 #[async_trait]
@@ -153,7 +156,10 @@ impl GeofenceRepo for DBClient {
         Ok(row)
     }
 
-    async fn list_active_geofences_by_satker(&self, satker_id: Uuid) -> Result<Vec<Geofence>, Error> {
+    async fn list_active_geofences_by_satker(
+        &self,
+        satker_id: Uuid,
+    ) -> Result<Vec<Geofence>, Error> {
         let rows = sqlx::query_as!(
             Geofence,
             r#"
@@ -163,8 +169,8 @@ impl GeofenceRepo for DBClient {
             "#,
             satker_id,
         )
-            .fetch_all(&self.pool)
-            .await?;
+        .fetch_all(&self.pool)
+        .await?;
 
         Ok(rows)
     }

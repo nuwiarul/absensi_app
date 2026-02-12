@@ -33,7 +33,11 @@ pub trait WorkPatternRepo {
         item: WorkPatternUpsert,
     ) -> Result<SatkerWorkPattern, Error>;
 
-    async fn delete_work_pattern(&self, satker_id: Uuid, effective_from: NaiveDate) -> Result<u64, Error>;
+    async fn delete_work_pattern(
+        &self,
+        satker_id: Uuid,
+        effective_from: NaiveDate,
+    ) -> Result<u64, Error>;
 }
 
 #[async_trait]
@@ -63,8 +67,8 @@ impl WorkPatternRepo for DBClient {
             "#,
             satker_id
         )
-            .fetch_all(&self.pool)
-            .await?;
+        .fetch_all(&self.pool)
+        .await?;
 
         Ok(rows)
     }
@@ -132,20 +136,24 @@ impl WorkPatternRepo for DBClient {
             item.work_end,
             item.half_day_end
         )
-            .fetch_one(&self.pool)
-            .await?;
+        .fetch_one(&self.pool)
+        .await?;
 
         Ok(row)
     }
 
-    async fn delete_work_pattern(&self, satker_id: Uuid, effective_from: NaiveDate) -> Result<u64, Error> {
+    async fn delete_work_pattern(
+        &self,
+        satker_id: Uuid,
+        effective_from: NaiveDate,
+    ) -> Result<u64, Error> {
         let res = sqlx::query!(
             r#"DELETE FROM satker_work_patterns WHERE satker_id = $1 AND effective_from = $2"#,
             satker_id,
             effective_from
         )
-            .execute(&self.pool)
-            .await?;
+        .execute(&self.pool)
+        .await?;
 
         Ok(res.rows_affected())
     }

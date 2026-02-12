@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO tukin_policies (\n          scope,\n          satker_id,\n          effective_from,\n          effective_to,\n          missing_checkout_penalty_pct,\n          late_tolerance_minutes,\n          late_penalty_per_minute_pct,\n          max_daily_penalty_pct,\n          out_of_geofence_penalty_pct\n        ) VALUES (\n          $1,\n          $2,\n          $3,\n          $4,\n          COALESCE($5, 25.0::DOUBLE PRECISION),\n          COALESCE($6, 0),\n          COALESCE($7, 0.0::DOUBLE PRECISION),\n          COALESCE($8, 100.0::DOUBLE PRECISION),\n          COALESCE($9, 0.0::DOUBLE PRECISION)\n        )\n        RETURNING id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid",
+        "Date",
+        "Date",
+        "Float8",
+        "Int4",
+        "Float8",
+        "Float8",
+        "Float8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "1f79fa39f9e719daa7bc71ec66e63811e69a9bd3fae609a71e4dc6c5a7d9701f"
+}

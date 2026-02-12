@@ -7,9 +7,8 @@ use uuid::Uuid;
 use crate::constants::{AttendanceEventType, LeaveStatus, LeaveType};
 use crate::db::DBClient;
 use crate::dtos::tukin::{
-    CreateTukinPolicyReq, LeaveRuleInput, TukinCalculationDto, TukinLeaveRuleDto, TukinPolicyDto,
-    UpdateTukinPolicyReq,
-    TukinCalculationRowDto,
+    CreateTukinPolicyReq, LeaveRuleInput, TukinCalculationDto, TukinCalculationRowDto,
+    TukinLeaveRuleDto, TukinPolicyDto, UpdateTukinPolicyReq,
 };
 
 #[derive(Debug, Clone, sqlx::FromRow)]
@@ -45,19 +44,40 @@ pub struct TukinCalculationUpsert {
 #[async_trait]
 pub trait TukinRepo {
     // rules
-    async fn find_active_tukin_policy(&self, satker_id: Uuid, period_start: NaiveDate) -> Result<TukinPolicyDto, Error>;
-    async fn list_tukin_policies(&self, satker_id: Option<Uuid>) -> Result<Vec<TukinPolicyDto>, Error>;
-    async fn create_tukin_policy(&self, req: CreateTukinPolicyReq) -> Result<TukinPolicyDto, Error>;
-    async fn update_tukin_policy(&self, policy_id: Uuid, req: UpdateTukinPolicyReq) -> Result<TukinPolicyDto, Error>;
+    async fn find_active_tukin_policy(
+        &self,
+        satker_id: Uuid,
+        period_start: NaiveDate,
+    ) -> Result<TukinPolicyDto, Error>;
+    async fn list_tukin_policies(
+        &self,
+        satker_id: Option<Uuid>,
+    ) -> Result<Vec<TukinPolicyDto>, Error>;
+    async fn create_tukin_policy(&self, req: CreateTukinPolicyReq)
+    -> Result<TukinPolicyDto, Error>;
+    async fn update_tukin_policy(
+        &self,
+        policy_id: Uuid,
+        req: UpdateTukinPolicyReq,
+    ) -> Result<TukinPolicyDto, Error>;
 
     async fn list_leave_rules(&self, policy_id: Uuid) -> Result<Vec<TukinLeaveRuleDto>, Error>;
-    async fn replace_leave_rules(&self, policy_id: Uuid, rules: Vec<LeaveRuleInput>) -> Result<Vec<TukinLeaveRuleDto>, Error>;
+    async fn replace_leave_rules(
+        &self,
+        policy_id: Uuid,
+        rules: Vec<LeaveRuleInput>,
+    ) -> Result<Vec<TukinLeaveRuleDto>, Error>;
 
     // base
     async fn get_user_base_tukin(&self, user_id: Uuid) -> Result<i64, Error>;
 
     // data
-    async fn list_approved_leaves_by_user(&self, user_id: Uuid, from: NaiveDate, to: NaiveDate) -> Result<Vec<LeaveSpanRow>, Error>;
+    async fn list_approved_leaves_by_user(
+        &self,
+        user_id: Uuid,
+        from: NaiveDate,
+        to: NaiveDate,
+    ) -> Result<Vec<LeaveSpanRow>, Error>;
     async fn find_first_event_in_range(
         &self,
         user_id: Uuid,
@@ -74,11 +94,18 @@ pub trait TukinRepo {
     ) -> Result<Option<AttendanceEventLite>, Error>;
 
     // cache
-    async fn upsert_tukin_calculation(&self, row: TukinCalculationUpsert) -> Result<TukinCalculationDto, Error>;
-    async fn list_tukin_calculations(&self, month: NaiveDate, satker_id: Option<Uuid>, user_id: Option<Uuid>) -> Result<Vec<TukinCalculationRowDto>, Error>;
+    async fn upsert_tukin_calculation(
+        &self,
+        row: TukinCalculationUpsert,
+    ) -> Result<TukinCalculationDto, Error>;
+    async fn list_tukin_calculations(
+        &self,
+        month: NaiveDate,
+        satker_id: Option<Uuid>,
+        user_id: Option<Uuid>,
+    ) -> Result<Vec<TukinCalculationRowDto>, Error>;
 
     async fn delete_tukin_policy(&self, policy_id: Uuid) -> Result<(), Error>;
-
 }
 
 #[async_trait]
@@ -156,8 +183,8 @@ impl TukinRepo for DBClient {
     ) -> Result<TukinPolicyDto, Error> {
         // 1) SATKER policy (most recent effective_from)
         if let Some(row) = sqlx::query_as!(
-        TukinPolicyDto,
-        r#"
+            TukinPolicyDto,
+            r#"
         SELECT
           p.id,
           p.scope,
@@ -182,19 +209,19 @@ impl TukinRepo for DBClient {
         ORDER BY p.effective_from DESC, p.created_at DESC
         LIMIT 1
         "#,
-        satker_id,
-        period_start
-    )
-            .fetch_optional(&self.pool)
-            .await?
+            satker_id,
+            period_start
+        )
+        .fetch_optional(&self.pool)
+        .await?
         {
             return Ok(row);
         }
 
         // 2) GLOBAL policy
         let row = sqlx::query_as!(
-        TukinPolicyDto,
-        r#"
+            TukinPolicyDto,
+            r#"
         SELECT
           p.id,
           p.scope,
@@ -218,15 +245,18 @@ impl TukinRepo for DBClient {
         ORDER BY p.effective_from DESC, p.created_at DESC
         LIMIT 1
         "#,
-        period_start
-    )
-            .fetch_one(&self.pool)
-            .await?;
+            period_start
+        )
+        .fetch_one(&self.pool)
+        .await?;
 
         Ok(row)
     }
 
-    async fn list_tukin_policies(&self, satker_id: Option<Uuid>) -> Result<Vec<TukinPolicyDto>, Error> {
+    async fn list_tukin_policies(
+        &self,
+        satker_id: Option<Uuid>,
+    ) -> Result<Vec<TukinPolicyDto>, Error> {
         // Return GLOBAL + optionally SATKER.
         let rows = sqlx::query_as!(
             TukinPolicyDto,
@@ -260,8 +290,8 @@ impl TukinRepo for DBClient {
             "#,
             satker_id
         )
-            .fetch_all(&self.pool)
-            .await?;
+        .fetch_all(&self.pool)
+        .await?;
 
         Ok(rows)
     }
@@ -321,9 +351,12 @@ impl TukinRepo for DBClient {
         Ok(row)
     }*/
 
-    async fn create_tukin_policy(&self, req: CreateTukinPolicyReq) -> Result<TukinPolicyDto, Error> {
+    async fn create_tukin_policy(
+        &self,
+        req: CreateTukinPolicyReq,
+    ) -> Result<TukinPolicyDto, Error> {
         let rec = sqlx::query!(
-        r#"
+            r#"
         INSERT INTO tukin_policies (
           scope,
           satker_id,
@@ -347,22 +380,22 @@ impl TukinRepo for DBClient {
         )
         RETURNING id
         "#,
-        req.scope,
-        req.satker_id,
-        req.effective_from,
-        req.effective_to,
-        req.missing_checkout_penalty_pct,
-        req.late_tolerance_minutes,
-        req.late_penalty_per_minute_pct,
-        req.max_daily_penalty_pct,
-        req.out_of_geofence_penalty_pct
-    )
-            .fetch_one(&self.pool)
-            .await?;
+            req.scope,
+            req.satker_id,
+            req.effective_from,
+            req.effective_to,
+            req.missing_checkout_penalty_pct,
+            req.late_tolerance_minutes,
+            req.late_penalty_per_minute_pct,
+            req.max_daily_penalty_pct,
+            req.out_of_geofence_penalty_pct
+        )
+        .fetch_one(&self.pool)
+        .await?;
 
         let row = sqlx::query_as!(
-        TukinPolicyDto,
-        r#"
+            TukinPolicyDto,
+            r#"
         SELECT
           p.id,
           p.scope,
@@ -382,14 +415,13 @@ impl TukinRepo for DBClient {
         LEFT JOIN satkers s ON s.id = p.satker_id
         WHERE p.id = $1
         "#,
-        rec.id
-    )
-            .fetch_one(&self.pool)
-            .await?;
+            rec.id
+        )
+        .fetch_one(&self.pool)
+        .await?;
 
         Ok(row)
     }
-
 
     /*async fn update_tukin_policy(&self, policy_id: Uuid, req: UpdateTukinPolicyReq) -> Result<TukinPolicyDto, Error> {
         let row = sqlx::query_as!(
@@ -441,7 +473,7 @@ impl TukinRepo for DBClient {
         req: UpdateTukinPolicyReq,
     ) -> Result<TukinPolicyDto, Error> {
         let rec = sqlx::query!(
-        r#"
+            r#"
         UPDATE tukin_policies
         SET
           effective_from = $2,
@@ -455,21 +487,21 @@ impl TukinRepo for DBClient {
         WHERE id = $1
         RETURNING id
         "#,
-        policy_id,
-        req.effective_from,
-        req.effective_to,
-        req.missing_checkout_penalty_pct,
-        req.late_tolerance_minutes,
-        req.late_penalty_per_minute_pct,
-        req.max_daily_penalty_pct,
-        req.out_of_geofence_penalty_pct
-    )
-            .fetch_one(&self.pool)
-            .await?;
+            policy_id,
+            req.effective_from,
+            req.effective_to,
+            req.missing_checkout_penalty_pct,
+            req.late_tolerance_minutes,
+            req.late_penalty_per_minute_pct,
+            req.max_daily_penalty_pct,
+            req.out_of_geofence_penalty_pct
+        )
+        .fetch_one(&self.pool)
+        .await?;
 
         let row = sqlx::query_as!(
-        TukinPolicyDto,
-        r#"
+            TukinPolicyDto,
+            r#"
         SELECT
           p.id,
           p.scope,
@@ -489,14 +521,13 @@ impl TukinRepo for DBClient {
         LEFT JOIN satkers s ON s.id = p.satker_id
         WHERE p.id = $1
         "#,
-        rec.id
-    )
-            .fetch_one(&self.pool)
-            .await?;
+            rec.id
+        )
+        .fetch_one(&self.pool)
+        .await?;
 
         Ok(row)
     }
-
 
     async fn list_leave_rules(&self, policy_id: Uuid) -> Result<Vec<TukinLeaveRuleDto>, Error> {
         let rows = sqlx::query_as!(
@@ -513,21 +544,25 @@ impl TukinRepo for DBClient {
             "#,
             policy_id
         )
-            .fetch_all(&self.pool)
-            .await?;
+        .fetch_all(&self.pool)
+        .await?;
 
         Ok(rows)
     }
 
-    async fn replace_leave_rules(&self, policy_id: Uuid, rules: Vec<LeaveRuleInput>) -> Result<Vec<TukinLeaveRuleDto>, Error> {
+    async fn replace_leave_rules(
+        &self,
+        policy_id: Uuid,
+        rules: Vec<LeaveRuleInput>,
+    ) -> Result<Vec<TukinLeaveRuleDto>, Error> {
         let mut tx = self.pool.begin().await?;
 
         sqlx::query!(
             r#"DELETE FROM tukin_leave_type_rules WHERE policy_id = $1"#,
             policy_id
         )
-            .execute(&mut *tx)
-            .await?;
+        .execute(&mut *tx)
+        .await?;
 
         for r in rules {
             sqlx::query!(
@@ -559,13 +594,18 @@ impl TukinRepo for DBClient {
             "#,
             user_id
         )
-            .fetch_one(&self.pool)
-            .await?;
+        .fetch_one(&self.pool)
+        .await?;
 
         Ok(row.tukin_base.unwrap_or(0))
     }
 
-    async fn list_approved_leaves_by_user(&self, user_id: Uuid, from: NaiveDate, to: NaiveDate) -> Result<Vec<LeaveSpanRow>, Error> {
+    async fn list_approved_leaves_by_user(
+        &self,
+        user_id: Uuid,
+        from: NaiveDate,
+        to: NaiveDate,
+    ) -> Result<Vec<LeaveSpanRow>, Error> {
         let rows = sqlx::query_as!(
             LeaveSpanRow,
             r#"
@@ -583,8 +623,8 @@ impl TukinRepo for DBClient {
             from,
             to
         )
-            .fetch_all(&self.pool)
-            .await?;
+        .fetch_all(&self.pool)
+        .await?;
 
         Ok(rows)
     }
@@ -613,8 +653,8 @@ impl TukinRepo for DBClient {
             from,
             to
         )
-            .fetch_optional(&self.pool)
-            .await?;
+        .fetch_optional(&self.pool)
+        .await?;
 
         Ok(row)
     }
@@ -643,13 +683,16 @@ impl TukinRepo for DBClient {
             from,
             to
         )
-            .fetch_optional(&self.pool)
-            .await?;
+        .fetch_optional(&self.pool)
+        .await?;
 
         Ok(row)
     }
 
-    async fn upsert_tukin_calculation(&self, row: TukinCalculationUpsert) -> Result<TukinCalculationDto, Error> {
+    async fn upsert_tukin_calculation(
+        &self,
+        row: TukinCalculationUpsert,
+    ) -> Result<TukinCalculationDto, Error> {
         let rec = sqlx::query_as!(
             TukinCalculationDto,
             r#"
@@ -699,8 +742,8 @@ impl TukinRepo for DBClient {
             row.final_tukin,
             row.breakdown
         )
-            .fetch_one(&self.pool)
-            .await?;
+        .fetch_one(&self.pool)
+        .await?;
 
         Ok(rec)
     }
@@ -755,13 +798,9 @@ impl TukinRepo for DBClient {
     }
 
     async fn delete_tukin_policy(&self, policy_id: Uuid) -> Result<(), Error> {
-        sqlx::query!(
-        r#"DELETE FROM tukin_policies WHERE id = $1"#,
-        policy_id
-    )
+        sqlx::query!(r#"DELETE FROM tukin_policies WHERE id = $1"#, policy_id)
             .execute(&self.pool)
             .await?;
         Ok(())
     }
-
 }

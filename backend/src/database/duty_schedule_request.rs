@@ -67,8 +67,8 @@ impl DutyScheduleRequestRepo for DBClient {
             title,
             note
         )
-            .fetch_one(&self.pool)
-            .await?;
+        .fetch_one(&self.pool)
+        .await?;
 
         Ok(row.id)
     }
@@ -120,8 +120,8 @@ impl DutyScheduleRequestRepo for DBClient {
             from,
             to
         )
-            .fetch_all(&self.pool)
-            .await?;
+        .fetch_all(&self.pool)
+        .await?;
 
         Ok(rows)
     }
@@ -152,8 +152,8 @@ impl DutyScheduleRequestRepo for DBClient {
             end_at,
             exclude_id
         )
-            .fetch_optional(&self.pool)
-            .await?;
+        .fetch_optional(&self.pool)
+        .await?;
 
         Ok(row.is_some())
     }

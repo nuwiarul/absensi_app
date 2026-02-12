@@ -1,7 +1,7 @@
 use crate::AppState;
 use crate::database::rank::RankRepo;
-use crate::dtos::rank::{CreateRankReq, RankDto, RankResp, RanksResp, UpdateRankReq};
 use crate::dtos::SuccessResponse;
+use crate::dtos::rank::{CreateRankReq, RankDto, RankResp, RanksResp, UpdateRankReq};
 use crate::error::HttpError;
 use crate::middleware::auth_middleware::AuthMiddleware;
 use axum::extract::Path;
@@ -106,7 +106,13 @@ pub async fn update_rank(
 
     app_state
         .db_client
-        .update_rank(id, payload.code, payload.name, payload.description, payload.tukin_base)
+        .update_rank(
+            id,
+            payload.code,
+            payload.name,
+            payload.description,
+            payload.tukin_base,
+        )
         .await
         .map_err(|e| HttpError::server_error(e.to_string()))?;
 

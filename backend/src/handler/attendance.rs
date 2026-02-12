@@ -1,35 +1,35 @@
 use crate::AppState;
 use crate::constants::{AttendanceEventType, AttendanceLeaveType};
 use crate::database::attendance::{AddAttendanceEvent, AttendanceEventRepo};
+use crate::database::attendance_apel::AttendanceApelRepo;
 use crate::database::attendance_session::AttendanceSessionRepo;
+use crate::database::duty_schedule::DutyScheduleRepo;
 use crate::database::geofence::GeofenceRepo;
-use crate::dtos::attendance::{AttendanceDto, AttendanceRekapDto, AttendanceRekapDtoQuery, AttendanceRekapDtoResp, AttendanceRekapsDtoResp, AttendanceReq, AttendanceResp, AttendanceSessionTodayDto, AttendanceSessionTodayResp};
-use crate::dtos::geofence::CreateGeofenceReq;
+use crate::database::leave_request::LeaveRequestRepo;
+use crate::database::user_device::UserDeviceRepo;
+use crate::database::work_pattern::{WorkPatternRepo, pick_effective_pattern};
+use crate::dtos::attendance::{
+    AttendanceDto, AttendanceRekapDto, AttendanceRekapDtoQuery, AttendanceRekapDtoResp,
+    AttendanceRekapsDtoResp, AttendanceReq, AttendanceResp, AttendanceSessionTodayDto,
+    AttendanceSessionTodayResp,
+};
+use crate::dtos::attendance_apel::{AttendanceApelHistoryQuery, AttendanceApelHistoryResp};
+use crate::dtos::duty_schedule::DutyScheduleDto;
 use crate::error::HttpError;
+use crate::handler::attendance_admin::attendance_admin_handler;
 use crate::handler::attendance_challenge::{anti_teleport_check, validate_and_use_challenge};
 use crate::middleware::auth_middleware::AuthMiddleware;
 use crate::utils::fungsi::haversine_m;
-use axum::extract::{Path, Query};
+use crate::utils::timezone_cache::get_timezone_cached;
+use axum::extract::Query;
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Extension, Json, Router};
 use chrono::{Duration, NaiveDate, NaiveTime, TimeZone, Utc};
+use chrono_tz::Asia::Jakarta;
 use std::sync::Arc;
 use uuid::Uuid;
 use validator::Validate;
-use crate::database::user_device::UserDeviceRepo;
-use chrono_tz::Asia::Jakarta;
-use crate::auth::rbac::UserRole;
-use crate::database::attendance_apel::AttendanceApelRepo;
-use crate::database::duty_schedule::DutyScheduleRepo;
-use crate::database::leave_request::LeaveRequestRepo;
-use crate::database::schedule::ScheduleRepo;
-use crate::database::work_pattern::{pick_effective_pattern, WorkPatternRepo};
-use crate::dtos::attendance_apel::{AttendanceApelHistoryQuery, AttendanceApelHistoryResp};
-use crate::dtos::duty_schedule::DutyScheduleDto;
-use crate::dtos::schedule::{can_manage_schedule, ScheduleQuery, SchedulesResp};
-use crate::handler::attendance_admin::attendance_admin_handler;
-use crate::utils::timezone_cache::get_timezone_cached;
 
 pub fn attendance_handler() -> Router {
     Router::new()
@@ -42,20 +42,23 @@ pub fn attendance_handler() -> Router {
         .nest("/admin", attendance_admin_handler())
 }
 
-
 const EARLY_CHECKIN_HOURS: i64 = 2;
 const DUTY_GRACE_HOURS: i64 = 6;
 const DUTY_MAX_CHECKOUT_HOURS: i64 = 24;
 
 const DUTY_CARD_GRACE_MINUTES: i64 = 30;
 
-fn local_day_bounds_utc<Tz: TimeZone>(tz: &Tz, date: NaiveDate) -> (chrono::DateTime<Utc>, chrono::DateTime<Utc>)
+fn local_day_bounds_utc<Tz: TimeZone>(
+    tz: &Tz,
+    date: NaiveDate,
+) -> (chrono::DateTime<Utc>, chrono::DateTime<Utc>)
 where
     Tz::Offset: std::fmt::Display,
 {
     // Convert local midnight bounds to UTC.
     let start_local = date.and_time(NaiveTime::from_hms_opt(0, 0, 0).unwrap());
-    let next_local = (date + chrono::Days::new(1)).and_time(NaiveTime::from_hms_opt(0, 0, 0).unwrap());
+    let next_local =
+        (date + chrono::Days::new(1)).and_time(NaiveTime::from_hms_opt(0, 0, 0).unwrap());
 
     let start_utc = tz
         .from_local_datetime(&start_local)
@@ -160,10 +163,13 @@ pub async fn check_in(
 
      */
 
-    let device_id = payload.device_id.clone()
+    let device_id = payload
+        .device_id
+        .clone()
         .ok_or(HttpError::bad_request("device_id wajib".to_string()))?;
 
-    app_state.db_client
+    app_state
+        .db_client
         .ensure_device_bound_first_user(
             user_claims.user_claims.user_id,
             &device_id,
@@ -171,12 +177,15 @@ pub async fn check_in(
             payload.android_version.clone(),
             payload.app_build.clone(),
             payload.client_version.clone(),
-        ).await
+        )
+        .await
         .map_err(|e| HttpError::bad_request(e.to_string()))?;
 
     // ✅ reject mock
     if payload.is_mock.unwrap_or(false) {
-        return Err(HttpError::bad_request("mock location terdeteksi".to_string()));
+        return Err(HttpError::bad_request(
+            "mock location terdeteksi".to_string(),
+        ));
     }
 
     // ✅ reject location too old
@@ -187,10 +196,12 @@ pub async fn check_in(
     }*/
 
     // ✅ reject accuracy too poor
-    if let Some(acc) = payload.accuracy_meters {
-        if acc > 50.0 {
-            return Err(HttpError::bad_request("akurasi lokasi terlalu rendah, silakan coba lagi".to_string()));
-        }
+    if let Some(acc) = payload.accuracy_meters
+        && acc > 50.0
+    {
+        return Err(HttpError::bad_request(
+            "akurasi lokasi terlalu rendah, silakan coba lagi".to_string(),
+        ));
     }
 
     validate_and_use_challenge(
@@ -198,7 +209,8 @@ pub async fn check_in(
         &user_claims.user_claims,
         payload.challenge_id,
         &device_id, // ✅ bind device
-    ).await?;
+    )
+    .await?;
 
     anti_teleport_check(
         &app_state,
@@ -206,7 +218,8 @@ pub async fn check_in(
         &device_id,
         payload.latitude,
         payload.longitude,
-    ).await?;
+    )
+    .await?;
 
     let nearest = nearest_geofence(
         &app_state,
@@ -214,8 +227,8 @@ pub async fn check_in(
         payload.latitude,
         payload.longitude,
     )
-        .await
-        .map_err(|e| HttpError::bad_request(e.to_string()))?;
+    .await
+    .map_err(|e| HttpError::bad_request(e.to_string()))?;
 
     let (geofence_id, distance_m, radius_m) = nearest.ok_or(HttpError::bad_request(
         "geofence aktif belum diset untuk satker ini".to_string(),
@@ -230,7 +243,7 @@ pub async fn check_in(
 
     let out_of_fence = distance_m > radius_m as f64;
 
-    let mut leave_type = payload.leave_type.clone().unwrap_or(AttendanceLeaveType::Normal);
+    let mut leave_type = payload.leave_type.unwrap_or(AttendanceLeaveType::Normal);
     let leave_notes = payload.leave_notes.clone();
 
     if out_of_fence {
@@ -266,38 +279,36 @@ pub async fn check_in(
         user_claims.user_claims.user_id,
         now,
     )
-        .await?;
+    .await?;
 
     // 3) If there is a duty schedule yesterday and its session is still open, block check-in
     // until duty_end_at + grace. After that, allow check-in (avoid dead-end).
-    if duty_active.is_none() {
-        if let Some(duty_yesterday) = find_duty_by_local_date(
+    if duty_active.is_none()
+        && let Some(duty_yesterday) = find_duty_by_local_date(
             &app_state,
             user_claims.user_claims.satker_id,
             user_claims.user_claims.user_id,
             &tz,
             yesterday,
         )
-            .await? {
-            let duty_work_date = duty_yesterday.start_at.with_timezone(&tz).date_naive();
-            if let Some(sess_y) = app_state
-                .db_client
-                .find_attendance_session_by_user_date(user_claims.user_claims.user_id, duty_work_date)
-                .await
-                .map_err(|e| HttpError::server_error(e.to_string()))? {
-                if sess_y.check_in_at.is_some() && sess_y.check_out_at.is_none() {
-                    let grace_until = duty_yesterday.end_at + Duration::hours(DUTY_GRACE_HOURS);
-                    if now <= grace_until {
-
-                        return Err(HttpError::bad_request(format!(
-                            "anda belum check-out dari jadwal dinas yang kemarin ({} - {})",
-                            //duty_yesterday.start_at.to_rfc3339(),
-                            duty_yesterday.start_at.format("%d %b %Y %H:%M"),
-                            //duty_yesterday.end_at.to_rfc3339()
-                            duty_yesterday.end_at.format("%d %b %Y %H:%M"),
-                        )));
-                    }
-                }
+        .await?
+    {
+        let duty_work_date = duty_yesterday.start_at.with_timezone(&tz).date_naive();
+        if let Some(sess_y) = app_state
+            .db_client
+            .find_attendance_session_by_user_date(user_claims.user_claims.user_id, duty_work_date)
+            .await
+            .map_err(|e| HttpError::server_error(e.to_string()))?
+            && sess_y.check_in_at.is_some()
+            && sess_y.check_out_at.is_none()
+        {
+            let grace_until = duty_yesterday.end_at + Duration::hours(DUTY_GRACE_HOURS);
+            if now <= grace_until {
+                return Err(HttpError::bad_request(format!(
+                    "anda belum check-out dari jadwal dinas yang kemarin ({} - {})",
+                    duty_yesterday.start_at.format("%d %b %Y %H:%M"),
+                    duty_yesterday.end_at.format("%d %b %Y %H:%M"),
+                )));
             }
         }
     }
@@ -313,7 +324,7 @@ pub async fn check_in(
             &tz,
             today,
         )
-            .await?
+        .await?
     } else {
         None
     };
@@ -350,15 +361,14 @@ pub async fn check_in(
         .db_client
         .find_attendance_session_by_user_date(user_claims.user_claims.user_id, target_work_date)
         .await
-        .map_err(|e| HttpError::server_error(e.to_string()))? {
-        if let Some(ci) = existing.check_in_at {
-            let ci_local = ci.with_timezone(&tz);
-            return Err(HttpError::bad_request(format!(
-                "Anda sudah melakukan check in, pada hari ini {}",
-                //ci.to_rfc3339()
-                ci_local.format("%d %b %Y %H:%M")
-            )));
-        }
+        .map_err(|e| HttpError::server_error(e.to_string()))?
+        && let Some(ci) = existing.check_in_at
+    {
+        let ci_local = ci.with_timezone(&tz);
+        return Err(HttpError::bad_request(format!(
+            "Anda sudah melakukan check in, pada hari ini {}",
+            ci_local.format("%d %b %Y %H:%M")
+        )));
     }
 
     // If not in duty context, enforce work window.
@@ -370,7 +380,7 @@ pub async fn check_in(
             user_claims.user_claims.satker_id,
             target_work_date,
         )
-            .await?;
+        .await?;
 
         let start_local = target_work_date.and_time(work_start);
         let end_local = target_work_date.and_time(work_end);
@@ -434,7 +444,9 @@ pub async fn check_in(
                 ci_local.format("%d %b %Y %H:%M")
             )));
         }
-        return Err(HttpError::bad_request("Anda sudah melakukan check in".to_string()));
+        return Err(HttpError::bad_request(
+            "Anda sudah melakukan check in".to_string(),
+        ));
     }
 
     let updated = app_state
@@ -484,31 +496,32 @@ pub async fn check_in(
     // - harus di dalam geofence (out_of_fence == false)
     // - tidak dalam konteks duty schedule
     // - masih dalam window apel: now <= work_start + 2 jam
-    if payload.apel.unwrap_or(false) && !out_of_fence && _duty_context.is_none() {
-        if let Some(ws) = work_start_dt_local {
-            let apel_deadline = ws + Duration::hours(EARLY_CHECKIN_HOURS);
-            if local_now <= apel_deadline {
-                // work_date apel mengikuti tanggal lokal hari ini, bukan tanggal duty.
-                let _ = app_state
-                    .db_client
-                    .upsert_attendance_apel(
-                        user_claims.user_claims.satker_id,
-                        user_claims.user_claims.user_id,
-                        today,
-                        now,
-                        "PAGI",
-                        "CHECKIN",
-                    )
-                    .await;
-            }
+    if payload.apel.unwrap_or(false)
+        && !out_of_fence
+        && _duty_context.is_none()
+        && let Some(ws) = work_start_dt_local
+    {
+        let apel_deadline = ws + Duration::hours(EARLY_CHECKIN_HOURS);
+        if local_now <= apel_deadline {
+            let _ = app_state
+                .db_client
+                .upsert_attendance_apel(
+                    user_claims.user_claims.satker_id,
+                    user_claims.user_claims.user_id,
+                    today,
+                    now,
+                    "PAGI",
+                    "CHECKIN",
+                )
+                .await;
         }
     }
 
     let attendance_dto = AttendanceDto {
         session_id: updated.id,
         work_date: updated.work_date,
-        check_in_at: updated.check_in_at.map(|t| t.into()),
-        check_out_at: updated.check_out_at.map(|t| t.into()),
+        check_in_at: updated.check_in_at,
+        check_out_at: updated.check_out_at,
         geofence_id: Some(geofence_id),
         distance_to_fence_m: Some(distance_m),
         geofence_name: Some(fence_row.unwrap().name),
@@ -537,10 +550,13 @@ pub async fn check_out(
 
      */
 
-    let device_id = payload.device_id.clone()
+    let device_id = payload
+        .device_id
+        .clone()
         .ok_or(HttpError::bad_request("device_id wajib".to_string()))?;
 
-    app_state.db_client
+    app_state
+        .db_client
         .ensure_device_bound_first_user(
             user_claims.user_claims.user_id,
             &device_id,
@@ -548,26 +564,31 @@ pub async fn check_out(
             payload.android_version.clone(),
             payload.app_build.clone(),
             payload.client_version.clone(),
-        ).await
+        )
+        .await
         .map_err(|e| HttpError::bad_request(e.to_string()))?;
 
     // ✅ reject mock
     if payload.is_mock.unwrap_or(false) {
-        return Err(HttpError::bad_request("mock location terdeteksi".to_string()));
+        return Err(HttpError::bad_request(
+            "mock location terdeteksi".to_string(),
+        ));
     }
 
     // ✅ reject location too old
     /* if let Some(age) = payload.location_age_ms {
-         if age > 10_000 {
-             return Err(HttpError::bad_request("lokasi terlalu lama, silakan refresh lokasi".to_string()));
-         }
-     }*/
+        if age > 10_000 {
+            return Err(HttpError::bad_request("lokasi terlalu lama, silakan refresh lokasi".to_string()));
+        }
+    }*/
 
     // ✅ reject accuracy too poor
-    if let Some(acc) = payload.accuracy_meters {
-        if acc > 50.0 {
-            return Err(HttpError::bad_request("akurasi lokasi terlalu rendah, silakan coba lagi".to_string()));
-        }
+    if let Some(acc) = payload.accuracy_meters
+        && acc > 50.0
+    {
+        return Err(HttpError::bad_request(
+            "akurasi lokasi terlalu rendah, silakan coba lagi".to_string(),
+        ));
     }
 
     validate_and_use_challenge(
@@ -575,7 +596,8 @@ pub async fn check_out(
         &user_claims.user_claims,
         payload.challenge_id,
         &device_id, // ✅ bind device
-    ).await?;
+    )
+    .await?;
 
     anti_teleport_check(
         &app_state,
@@ -583,7 +605,8 @@ pub async fn check_out(
         &device_id,
         payload.latitude,
         payload.longitude,
-    ).await?;
+    )
+    .await?;
 
     let nearest = nearest_geofence(
         &app_state,
@@ -591,23 +614,23 @@ pub async fn check_out(
         payload.latitude,
         payload.longitude,
     )
-        .await
-        .map_err(|e| HttpError::bad_request(e.to_string()))?;
+    .await
+    .map_err(|e| HttpError::bad_request(e.to_string()))?;
 
     let (geofence_id, distance_m, radius_m) = nearest.ok_or(HttpError::bad_request(
         "geofence aktif belum diset untuk satker ini".to_string(),
     ))?;
 
     /* if distance_m > radius_m as f64 {
-         return Err(HttpError::bad_request(format!(
-             "di luar geofence: jarak {:.1}m > radius {}m",
-             distance_m, radius_m
-         )));
-     }*/
+        return Err(HttpError::bad_request(format!(
+            "di luar geofence: jarak {:.1}m > radius {}m",
+            distance_m, radius_m
+        )));
+    }*/
 
     let out_of_fence = distance_m > radius_m as f64;
 
-    let mut leave_type = payload.leave_type.clone().unwrap_or(AttendanceLeaveType::Normal);
+    let mut leave_type = payload.leave_type.unwrap_or(AttendanceLeaveType::Normal);
     let leave_notes = payload.leave_notes.clone();
 
     if out_of_fence {
@@ -635,7 +658,7 @@ pub async fn check_out(
         .map_err(|e| HttpError::server_error(e.to_string()))?;
 
     // 1) Prefer session today.
-    let mut target_work_date = today;
+    let mut _target_work_date = today;
     let mut used_duty = false;
     let mut target_session = app_state
         .db_client
@@ -643,7 +666,11 @@ pub async fn check_out(
         .await
         .map_err(|e| HttpError::server_error(e.to_string()))?;
 
-    if target_session.as_ref().and_then(|s| s.check_in_at).is_none() {
+    if target_session
+        .as_ref()
+        .and_then(|s| s.check_in_at)
+        .is_none()
+    {
         // 2) If no check-in today, try active duty now.
         if let Some(duty_active) = find_active_duty_now(
             &app_state,
@@ -651,12 +678,15 @@ pub async fn check_out(
             user_claims.user_claims.user_id,
             now,
         )
-            .await?
+        .await?
         {
             let duty_work_date = duty_active.start_at.with_timezone(&tz).date_naive();
             let sess = app_state
                 .db_client
-                .find_attendance_session_by_user_date(user_claims.user_claims.user_id, duty_work_date)
+                .find_attendance_session_by_user_date(
+                    user_claims.user_claims.user_id,
+                    duty_work_date,
+                )
                 .await
                 .map_err(|e| HttpError::server_error(e.to_string()))?;
             if let Some(s) = sess {
@@ -670,7 +700,7 @@ pub async fn check_out(
                         DUTY_MAX_CHECKOUT_HOURS
                     )));
                 }
-                target_work_date = duty_work_date;
+                _target_work_date = duty_work_date;
                 used_duty = true;
                 target_session = Some(s);
             } else {
@@ -685,26 +715,30 @@ pub async fn check_out(
                 &tz,
                 yesterday,
             )
-                .await?
+            .await?
             {
                 let duty_work_date = duty_yesterday.start_at.with_timezone(&tz).date_naive();
                 let sess = app_state
                     .db_client
-                    .find_attendance_session_by_user_date(user_claims.user_claims.user_id, duty_work_date)
+                    .find_attendance_session_by_user_date(
+                        user_claims.user_claims.user_id,
+                        duty_work_date,
+                    )
                     .await
                     .map_err(|e| HttpError::server_error(e.to_string()))?;
                 if let Some(s) = sess {
                     if s.check_in_at.is_none() {
                         return Err(HttpError::bad_request("anda belum check-in".to_string()));
                     }
-                    let max_until = duty_yesterday.end_at + Duration::hours(DUTY_MAX_CHECKOUT_HOURS);
+                    let max_until =
+                        duty_yesterday.end_at + Duration::hours(DUTY_MAX_CHECKOUT_HOURS);
                     if now > max_until {
                         return Err(HttpError::bad_request(format!(
                             "anda check-out lebih dari {} jam dari shift yang diijinkan",
                             DUTY_MAX_CHECKOUT_HOURS
                         )));
                     }
-                    target_work_date = duty_work_date;
+                    _target_work_date = duty_work_date;
                     used_duty = true;
                     target_session = Some(s);
                 } else {
@@ -730,9 +764,9 @@ pub async fn check_out(
         .await
         .map_err(|e| HttpError::server_error(e.to_string()))?;
 
-    if let Some(_) = attendance_event_row {
-
-        let sess_check_in = app_state.db_client
+    if attendance_event_row.is_some() {
+        let sess_check_in = app_state
+            .db_client
             .find_attendance_session(session_id)
             .await
             .map_err(|e| HttpError::server_error(e.to_string()))?;
@@ -741,7 +775,9 @@ pub async fn check_out(
         //let iso = session_hour.to_rfc3339();
         let iso = session_hour.format("%d %b %Y %H:%M").to_string();
 
-        return Err(HttpError::bad_request(format!("Anda sudah melakukan check out, pada hari ini {iso}")));
+        return Err(HttpError::bad_request(format!(
+            "Anda sudah melakukan check out, pada hari ini {iso}"
+        )));
     }
 
     let updated = app_state
@@ -792,12 +828,8 @@ pub async fn check_out(
     // - bukan konteks duty schedule (used_duty == false)
     // - masih dalam window apel: now <= work_start + 2 jam
     if payload.apel.unwrap_or(false) && !out_of_fence && !used_duty {
-        let (work_start, _work_end) = get_work_window_local(
-            &app_state,
-            user_claims.user_claims.satker_id,
-            today,
-        )
-            .await?;
+        let (work_start, _work_end) =
+            get_work_window_local(&app_state, user_claims.user_claims.satker_id, today).await?;
 
         let start_local = today.and_time(work_start);
         let work_start_dt = tz
@@ -824,8 +856,8 @@ pub async fn check_out(
     let attendance_dto = AttendanceDto {
         session_id: updated.id,
         work_date: updated.work_date,
-        check_in_at: updated.check_in_at.map(|t| t.into()),
-        check_out_at: updated.check_out_at.map(|t| t.into()),
+        check_in_at: updated.check_in_at,
+        check_out_at: updated.check_out_at,
         geofence_id: Some(geofence_id),
         distance_to_fence_m: Some(distance_m),
         geofence_name: Some(fence_row.unwrap().name),
@@ -857,7 +889,7 @@ pub async fn get_attendance_session_today(
     let today = local_now.date_naive();
     let yesterday = today - chrono::Days::new(1);
 
-/*    // 1) Session hari ini
+    /*    // 1) Session hari ini
     if let Some(s) = app_state
         .db_client
         .find_attendance_session_by_user_date(user_claims.user_claims.user_id, today)
@@ -894,24 +926,23 @@ pub async fn get_attendance_session_today(
             &tz,
             today,
         )
-            .await?
+        .await?
+            && duty_today.end_at + Duration::minutes(DUTY_CARD_GRACE_MINUTES) > now
         {
-            if duty_today.end_at + Duration::minutes(DUTY_CARD_GRACE_MINUTES) > now {
-                let duty_work_date = duty_today.start_at.with_timezone(&tz).date_naive();
-                if duty_work_date == s.work_date {
-                    let resp = AttendanceSessionTodayResp {
-                        status: "200",
-                        data: AttendanceSessionTodayDto {
-                            work_date: today,
-                            check_in_at: s.check_in_at,
-                            check_out_at: s.check_out_at,
-                            is_duty: true,
-                            duty_start_at: Some(duty_today.start_at),
-                            duty_end_at: Some(duty_today.end_at),
-                        },
-                    };
-                    return Ok(Json(resp));
-                }
+            let duty_work_date = duty_today.start_at.with_timezone(&tz).date_naive();
+            if duty_work_date == s.work_date {
+                let resp = AttendanceSessionTodayResp {
+                    status: "200",
+                    data: AttendanceSessionTodayDto {
+                        work_date: today,
+                        check_in_at: s.check_in_at,
+                        check_out_at: s.check_out_at,
+                        is_duty: true,
+                        duty_start_at: Some(duty_today.start_at),
+                        duty_end_at: Some(duty_today.end_at),
+                    },
+                };
+                return Ok(Json(resp));
             }
         }
 
@@ -937,7 +968,7 @@ pub async fn get_attendance_session_today(
         user_claims.user_claims.user_id,
         now,
     )
-        .await?
+    .await?
     {
         let duty_work_date = duty_active.start_at.with_timezone(&tz).date_naive();
         let sess = app_state
@@ -972,34 +1003,32 @@ pub async fn get_attendance_session_today(
         &tz,
         today,
     )
-        .await?
+    .await?
+        && duty_today.end_at + Duration::minutes(DUTY_CARD_GRACE_MINUTES) > now
     {
-        // Hanya tampilkan kalau duty belum berakhir.
-        if duty_today.end_at + Duration::minutes(DUTY_CARD_GRACE_MINUTES) > now {
-            let duty_work_date = duty_today.start_at.with_timezone(&tz).date_naive();
-            let sess = app_state
-                .db_client
-                .find_attendance_session_by_user_date(user_claims.user_claims.user_id, duty_work_date)
-                .await
-                .map_err(|e| HttpError::server_error(e.to_string()))?;
+        let duty_work_date = duty_today.start_at.with_timezone(&tz).date_naive();
+        let sess = app_state
+            .db_client
+            .find_attendance_session_by_user_date(user_claims.user_claims.user_id, duty_work_date)
+            .await
+            .map_err(|e| HttpError::server_error(e.to_string()))?;
 
-            let (check_in_at, check_out_at) = sess
-                .map(|s| (s.check_in_at, s.check_out_at))
-                .unwrap_or((None, None));
+        let (check_in_at, check_out_at) = sess
+            .map(|s| (s.check_in_at, s.check_out_at))
+            .unwrap_or((None, None));
 
-            let resp = AttendanceSessionTodayResp {
-                status: "200",
-                data: AttendanceSessionTodayDto {
-                    work_date: today,
-                    check_in_at,
-                    check_out_at,
-                    is_duty: true,
-                    duty_start_at: Some(duty_today.start_at),
-                    duty_end_at: Some(duty_today.end_at),
-                },
-            };
-            return Ok(Json(resp));
-        }
+        let resp = AttendanceSessionTodayResp {
+            status: "200",
+            data: AttendanceSessionTodayDto {
+                work_date: today,
+                check_in_at,
+                check_out_at,
+                is_duty: true,
+                duty_start_at: Some(duty_today.start_at),
+                duty_end_at: Some(duty_today.end_at),
+            },
+        };
+        return Ok(Json(resp));
     }
 
     // 4) Duty kemarin yang belum checkout (dan masih dalam grace window)
@@ -1010,33 +1039,34 @@ pub async fn get_attendance_session_today(
         &tz,
         yesterday,
     )
-        .await?
-    {
-        let duty_work_date = duty_yesterday.start_at.with_timezone(&tz).date_naive();
-        if let Some(s) = app_state
+    .await?
+        && let Some(s) = app_state
             .db_client
-            .find_attendance_session_by_user_date(user_claims.user_claims.user_id, duty_work_date)
+            .find_attendance_session_by_user_date(
+                user_claims.user_claims.user_id,
+                duty_yesterday.start_at.with_timezone(&tz).date_naive(),
+            )
             .await
             .map_err(|e| HttpError::server_error(e.to_string()))?
-        {
-            if s.check_in_at.is_some() && s.check_out_at.is_none() {
-                let grace_until = duty_yesterday.end_at + Duration::hours(DUTY_GRACE_HOURS);
-                if now <= grace_until {
-                    let resp = AttendanceSessionTodayResp {
-                        status: "200",
-                        data: AttendanceSessionTodayDto {
-                            work_date: today,
-                            check_in_at: s.check_in_at,
-                            check_out_at: s.check_out_at,
-                            is_duty: true,
-                            duty_start_at: Some(duty_yesterday.start_at),
-                            duty_end_at: Some(duty_yesterday.end_at),
-                        },
-                    };
-                    return Ok(Json(resp));
-                }
-            }
+        && s.check_in_at.is_some()
+        && s.check_out_at.is_none()
+        && {
+            let grace_until = duty_yesterday.end_at + Duration::hours(DUTY_GRACE_HOURS);
+            now <= grace_until
         }
+    {
+        let resp = AttendanceSessionTodayResp {
+            status: "200",
+            data: AttendanceSessionTodayDto {
+                work_date: today,
+                check_in_at: s.check_in_at,
+                check_out_at: s.check_out_at,
+                is_duty: true,
+                duty_start_at: Some(duty_yesterday.start_at),
+                duty_end_at: Some(duty_yesterday.end_at),
+            },
+        };
+        return Ok(Json(resp));
     }
 
     // 5) Fallback: kosong hari ini
@@ -1264,8 +1294,8 @@ async fn nearest_geofence(
     let attendance_dto = AttendanceDto {
         session_id: updated.id,
         work_date: updated.work_date,
-        check_in_at: updated.check_in_at.map(|t| t.into()),
-        check_out_at: updated.check_out_at.map(|t| t.into()),
+        check_in_at: updated.check_in_at,
+        check_out_at: updated.check_out_at,
         geofence_id: Some(geofence_id),
         distance_to_fence_m: Some(distance_m),
         geofence_name: Some(fence_row.unwrap().name),
@@ -1487,19 +1517,15 @@ pub async fn find_attendance(
     Extension(app_state): Extension<Arc<AppState>>,
     Extension(user_claims): Extension<AuthMiddleware>,
 ) -> Result<impl IntoResponse, HttpError> {
-
     let now = Utc::now();
     let now_wib = now.with_timezone(&Jakarta);
     let work_date = now_wib.date_naive();
 
-
     let row = app_state
-    .db_client
-        .find_attendance_by_user_work_date(
-            work_date,
-            user_claims.user_claims.user_id,
-        ).await
-    .map_err(|e| HttpError::server_error(e.to_string()))?;
+        .db_client
+        .find_attendance_by_user_work_date(work_date, user_claims.user_claims.user_id)
+        .await
+        .map_err(|e| HttpError::server_error(e.to_string()))?;
 
     let mut dto = AttendanceRekapDto::default();
 
@@ -1509,42 +1535,39 @@ pub async fn find_attendance(
         dto.user_id = row.user_id;
         dto.full_name = row.full_name;
         dto.nrp = row.nrp;
-        dto.check_in_at = row.check_in_at.map(|t| t.into());
-        dto.check_out_at = row.check_out_at.map(|t| t.into());
-        dto.check_in_geofence_id = row.check_in_geofence_id.map(|t| t.into());
-        dto.check_out_geofence_id = row.check_out_geofence_id.map(|t| t.into());
-        dto.check_in_distance_to_fence_m = row.check_in_distance_to_fence_m.map(|t| t.into());
-        dto.check_out_distance_to_fence_m = row.check_out_distance_to_fence_m.map(|t| t.into());
-        dto.check_in_geofence_name = row.check_in_geofence_name.map(|t| t.into());
-        dto.check_out_geofence_name = row.check_out_geofence_name.map(|t| t.into());
-        dto.check_in_latitude = row.check_in_latitude.map(|t| t.into());
-        dto.check_in_longitute = row.check_in_longitute.map(|t| t.into());
-        dto.check_out_latitude = row.check_out_latitude.map(|t| t.into());
-        dto.check_out_longitute = row.check_out_longitute.map(|t| t.into());
-        dto.check_in_selfie_object_key = row.check_in_selfie_object_key.map(|t| t.into());
-        dto.check_out_selfie_object_key = row.check_out_selfie_object_key.map(|t| t.into());
+        dto.check_in_at = row.check_in_at;
+        dto.check_out_at = row.check_out_at;
+        dto.check_in_geofence_id = row.check_in_geofence_id;
+        dto.check_out_geofence_id = row.check_out_geofence_id;
+        dto.check_in_distance_to_fence_m = row.check_in_distance_to_fence_m;
+        dto.check_out_distance_to_fence_m = row.check_out_distance_to_fence_m;
+        dto.check_in_geofence_name = row.check_in_geofence_name;
+        dto.check_out_geofence_name = row.check_out_geofence_name;
+        dto.check_in_latitude = row.check_in_latitude;
+        dto.check_in_longitute = row.check_in_longitute;
+        dto.check_out_latitude = row.check_out_latitude;
+        dto.check_out_longitute = row.check_out_longitute;
+        dto.check_in_selfie_object_key = row.check_in_selfie_object_key;
+        dto.check_out_selfie_object_key = row.check_out_selfie_object_key;
         dto.check_in_accuracy_meters = row.check_in_accuracy_meters;
         dto.check_out_accuracy_meters = row.check_out_accuracy_meters;
-        dto.check_in_attendance_leave_type = row.check_in_attendance_leave_type.map(|t| t.into());
-        dto.check_out_attendance_leave_type = row.check_out_attendance_leave_type.map(|t| t.into());
-        dto.check_in_attendance_leave_notes = row.check_in_attendance_leave_notes.map(|t| t.into());
-        dto.check_out_attendance_leave_notes = row.check_out_attendance_leave_notes.map(|t| t.into());
-        dto.check_in_device_id = row.check_in_device_id.map(|t| t.into());
-        dto.check_out_device_id = row.check_out_device_id.map(|t| t.into());
-        dto.check_in_device_model = row.check_in_device_model.map(|t| t.into());
-        dto.check_out_device_model = row.check_out_device_model.map(|t| t.into());
-        dto.check_in_device_name = row.check_in_device_name.map(|t| t.into());
-        dto.check_out_device_name = row.check_out_device_name.map(|t| t.into());
-
+        dto.check_in_attendance_leave_type = row.check_in_attendance_leave_type;
+        dto.check_out_attendance_leave_type = row.check_out_attendance_leave_type;
+        dto.check_in_attendance_leave_notes = row.check_in_attendance_leave_notes;
+        dto.check_out_attendance_leave_notes = row.check_out_attendance_leave_notes;
+        dto.check_in_device_id = row.check_in_device_id;
+        dto.check_out_device_id = row.check_out_device_id;
+        dto.check_in_device_model = row.check_in_device_model;
+        dto.check_out_device_model = row.check_out_device_model;
+        dto.check_in_device_name = row.check_in_device_name;
+        dto.check_out_device_name = row.check_out_device_name;
     } else {
         dto.session_id = Uuid::new_v4();
         dto.work_date = work_date;
         dto.user_id = user_claims.user.id;
         dto.full_name = user_claims.user.full_name;
         dto.nrp = user_claims.user.nrp;
-
     }
-
 
     let response = AttendanceRekapDtoResp {
         status: "200",
@@ -1553,7 +1576,6 @@ pub async fn find_attendance(
 
     Ok(Json(response))
 }
-
 
 pub async fn list_attendances(
     Query(query_params): Query<AttendanceRekapDtoQuery>,
@@ -1573,7 +1595,11 @@ pub async fn list_attendances(
     } else {
         app_state
             .db_client
-            .list_attendance_by_user_from_to(user_claims.user_claims.user_id, query_params.from, query_params.to)
+            .list_attendance_by_user_from_to(
+                user_claims.user_claims.user_id,
+                query_params.from,
+                query_params.to,
+            )
             .await
             .map_err(|e| HttpError::server_error(e.to_string()))?
     };
@@ -1586,7 +1612,6 @@ pub async fn list_attendances(
     Ok(Json(response).into_response())
 }
 
-
 pub async fn get_attendance_apel_history(
     Extension(app_state): Extension<Arc<AppState>>,
     Extension(user_claims): Extension<AuthMiddleware>,
@@ -1597,11 +1622,7 @@ pub async fn get_attendance_apel_history(
 
     let rows = app_state
         .db_client
-        .list_attendance_apel_by_user_from_to(
-            user_claims.user_claims.user_id,
-            q.from,
-            q.to,
-        )
+        .list_attendance_apel_by_user_from_to(user_claims.user_claims.user_id, q.from, q.to)
         .await
         .map_err(|e| HttpError::server_error(e.to_string()))?;
 

@@ -1,0 +1,146 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT r.id,\n                   r.satker_id,\n                   s.code AS satker_code,\n                   s.name AS satker_name,\n                   r.user_id,\n                   u.full_name AS user_full_name,\n                   u.nrp AS user_nrp,\n                   u.phone AS user_phone,\n                   r.start_at as \"start_at!\",\n                   r.end_at as \"end_at!\",\n                   r.schedule_type as \"schedule_type: ScheduleType\",\n                   r.title,\n                   r.note,\n                   r.status,\n                   r.reject_reason,\n                   r.decided_by,\n                   r.decided_at,\n                   r.created_at as \"created_at!\",\n                   r.updated_at as \"updated_at!\"\n            FROM duty_schedule_requests r\n            JOIN satkers s ON s.id = r.satker_id\n            JOIN users u ON u.id = r.user_id\n            WHERE ($1::uuid IS NULL OR r.satker_id = $1)\n              AND ($2::uuid IS NULL OR r.user_id = $2)\n              AND ($3::text IS NULL OR r.status = $3)\n              AND r.start_at < $5\n              AND r.end_at > $4\n            ORDER BY r.start_at ASC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "satker_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "satker_code",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "satker_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "user_full_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "user_nrp",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "user_phone",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "start_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 9,
+        "name": "end_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 10,
+        "name": "schedule_type: ScheduleType",
+        "type_info": {
+          "Custom": {
+            "name": "schedule_type",
+            "kind": {
+              "Enum": [
+                "REGULAR",
+                "SHIFT",
+                "ON_CALL",
+                "SPECIAL"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
+        "name": "note",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 13,
+        "name": "status",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 14,
+        "name": "reject_reason",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 15,
+        "name": "decided_by",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 16,
+        "name": "decided_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 17,
+        "name": "created_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 18,
+        "name": "updated_at!",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "39741fd1398f6c48f620a95a1035ffead43f365c752e0b17591427ef5f2321f0"
+}

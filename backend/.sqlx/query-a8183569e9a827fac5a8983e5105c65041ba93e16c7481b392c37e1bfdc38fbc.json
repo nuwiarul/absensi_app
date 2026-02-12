@@ -1,0 +1,100 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n          p.id,\n          p.scope,\n          p.satker_id,\n          s.code as \"satker_code?\",\n          s.name as \"satker_name?\",\n          p.effective_from,\n          p.effective_to,\n          p.missing_checkout_penalty_pct::float8 as \"missing_checkout_penalty_pct!\",\n          p.late_tolerance_minutes,\n          p.late_penalty_per_minute_pct::float8 as \"late_penalty_per_minute_pct!\",\n          p.max_daily_penalty_pct::float8 as \"max_daily_penalty_pct!\",\n          p.out_of_geofence_penalty_pct::float8 as \"out_of_geofence_penalty_pct!\",\n          p.created_at,\n          p.updated_at\n        FROM tukin_policies p\n        LEFT JOIN satkers s ON s.id = p.satker_id\n        WHERE p.id = $1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "scope",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "satker_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "satker_code?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "satker_name?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "effective_from",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 6,
+        "name": "effective_to",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 7,
+        "name": "missing_checkout_penalty_pct!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 8,
+        "name": "late_tolerance_minutes",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 9,
+        "name": "late_penalty_per_minute_pct!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 10,
+        "name": "max_daily_penalty_pct!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 11,
+        "name": "out_of_geofence_penalty_pct!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 12,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 13,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "a8183569e9a827fac5a8983e5105c65041ba93e16c7481b392c37e1bfdc38fbc"
+}

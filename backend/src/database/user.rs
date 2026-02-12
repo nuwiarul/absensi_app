@@ -47,13 +47,15 @@ pub trait UserRepo {
 
     async fn update_password_hash(&self, id: Uuid, password_hash: String) -> Result<(), Error>;
 
-    async fn update_profile_photo_key(&self, id: Uuid, profile_photo_key: Option<String>) -> Result<(), Error>;
+    async fn update_profile_photo_key(
+        &self,
+        id: Uuid,
+        profile_photo_key: Option<String>,
+    ) -> Result<(), Error>;
 
     async fn delete_user(&self, id: Uuid) -> Result<(), Error>;
 
     async fn set_satker_head(&self, id: Uuid) -> Result<(), Error>;
-
-    async fn get_satker_head(&self, satker_id: Uuid) -> Result<Option<User>, Error>;
 }
 
 #[async_trait]
@@ -193,8 +195,8 @@ impl UserRepo for DBClient {
             email,
             phone,
         )
-            .execute(&self.pool)
-            .await?;
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 
@@ -205,8 +207,8 @@ impl UserRepo for DBClient {
             "#,
             id
         )
-            .execute(&self.pool)
-            .await?;
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 
@@ -216,21 +218,6 @@ impl UserRepo for DBClient {
             .await?;
 
         Ok(())
-    }
-
-    async fn get_satker_head(&self, satker_id: Uuid) -> Result<Option<User>, Error> {
-        let row = sqlx::query_as!(
-            User,
-            r#"
-            SELECT
-            id, satker_id, rank_id, nrp, full_name, email, phone, profile_photo_key, role as "role: UserRole",
-            password_hash, is_active, face_template_version, face_template_hash, created_at, updated_at
-            FROM users WHERE satker_id = $1 AND role= 'SATKER_HEAD'
-            "#,
-            satker_id
-        ).fetch_optional(&self.pool)
-            .await?;
-        Ok(row)
     }
 
     async fn update_my_profile(
@@ -251,8 +238,8 @@ impl UserRepo for DBClient {
             full_name,
             phone,
         )
-            .execute(&self.pool)
-            .await?;
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 
@@ -267,12 +254,16 @@ impl UserRepo for DBClient {
             id,
             password_hash,
         )
-            .execute(&self.pool)
-            .await?;
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 
-    async fn update_profile_photo_key(&self, id: Uuid, profile_photo_key: Option<String>) -> Result<(), Error> {
+    async fn update_profile_photo_key(
+        &self,
+        id: Uuid,
+        profile_photo_key: Option<String>,
+    ) -> Result<(), Error> {
         sqlx::query!(
             r#"
             UPDATE users
@@ -283,8 +274,8 @@ impl UserRepo for DBClient {
             id,
             profile_photo_key,
         )
-            .execute(&self.pool)
-            .await?;
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 }

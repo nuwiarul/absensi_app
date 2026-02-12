@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM satker_calendar_days WHERE satker_id = $1 AND work_date = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Date"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d657451a2ba59b1bfb224171d91c08f2c1eca8124713ee15e266f2c215c8596d"
+}

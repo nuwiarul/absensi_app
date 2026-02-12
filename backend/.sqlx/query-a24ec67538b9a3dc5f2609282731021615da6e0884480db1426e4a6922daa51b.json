@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE duty_schedule_requests SET status = 'CANCELED', updated_at = now() WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a24ec67538b9a3dc5f2609282731021615da6e0884480db1426e4a6922daa51b"
+}

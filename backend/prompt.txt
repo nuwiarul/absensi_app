@@ -29,7 +29,7 @@ ATURAN WAJIB
 
 CHECKLIST SEBELUM SELESAI
 - `cargo fmt`
-- `cargo clippy` (fix lint yang jelas)
+- `cargo check`
 - pastikan route/handler tetap ter-register di src/routes.rs bila ada endpoint baru
 - pastikan DTO request/response konsisten dengan database dan handler
 
@@ -37,3 +37,5 @@ BILA TASK “REFACTOR”
 - Mulai dengan identifikasi duplikasi dan titik ekstraksi fungsi.
 - Buat desain modul singkat (2-5 bullet) sebelum menulis patch.
 - Pastikan modul baru punya nama jelas, single responsibility, dan mudah di-test.
+
+check juga agents.md untuk guideline

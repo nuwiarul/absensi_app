@@ -1,5 +1,8 @@
 use crate::auth::rbac::UserRole;
-use crate::constants::{AttendanceEventType, AttendanceLeaveType, AttendanceStatus, CalendarDayType, HolidayKind, HolidayScope, LeaveStatus, LeaveType, ScheduleType};
+use crate::constants::{
+    AttendanceEventType, AttendanceLeaveType, AttendanceStatus, CalendarDayType, HolidayKind,
+    HolidayScope, LeaveStatus, LeaveType, ScheduleType,
+};
 use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;

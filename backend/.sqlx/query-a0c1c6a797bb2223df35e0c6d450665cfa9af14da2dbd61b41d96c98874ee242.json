@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT id\n            FROM satker_heads\n            WHERE\n                satker_id = $1 AND\n                user_id = $2 AND\n                active_to IS NULL\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "a0c1c6a797bb2223df35e0c6d450665cfa9af14da2dbd61b41d96c98874ee242"
+}

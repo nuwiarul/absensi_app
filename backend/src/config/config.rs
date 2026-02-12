@@ -11,12 +11,12 @@ impl Config {
     pub fn init() -> Self {
         //dotenv::dotenv().ok();
 
-        let database_url = std::env::var("DATABASE_URL")
-            .expect("DATABASE_URL must be set in the environment");
-        let redis_url = std::env::var("REDIS_URL")
-            .expect("REDIS_URL must be set in the environment");
-        let jwt_secret = std::env::var("JWT_SECRET_KEY")
-            .expect("JWT_SECRET_KEY must be set in the environment");
+        let database_url =
+            std::env::var("DATABASE_URL").expect("DATABASE_URL must be set in the environment");
+        let redis_url =
+            std::env::var("REDIS_URL").expect("REDIS_URL must be set in the environment");
+        let jwt_secret =
+            std::env::var("JWT_SECRET_KEY").expect("JWT_SECRET_KEY must be set in the environment");
         let jwt_maxage = std::env::var("JWT_MAXAGE")
             .map(|v| v.parse::<i64>().unwrap_or(3600))
             .unwrap_or(3600);

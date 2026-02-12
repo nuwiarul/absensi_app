@@ -1,8 +1,5 @@
-use crate::auth::rbac::UserRole;
-use crate::database::satker::SatkerRepo;
 use crate::db::DBClient;
 use crate::dtos::satker_head::SarkerHeadDto;
-use crate::models::{Satker, User};
 use async_trait::async_trait;
 use sqlx::Error;
 use uuid::Uuid;
@@ -130,8 +127,8 @@ impl SatkerHeadRepo for DBClient {
             "#,
             satker_id
         )
-            .fetch_all(&self.pool)
-            .await?;
+        .fetch_all(&self.pool)
+        .await?;
 
         Ok(rows)
     }

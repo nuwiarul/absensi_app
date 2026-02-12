@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE geofences SET\n                name = COALESCE($2, name),\n                latitude = COALESCE($3, latitude),\n                longitude = COALESCE($4, longitude),\n                radius_meters = COALESCE($5, radius_meters)\n            WHERE id = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Float8",
+        "Float8",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3ab497bb6f93eb44a431d97fa47992fe5b7b8657246eee048011dcf03b6e7cfe"
+}

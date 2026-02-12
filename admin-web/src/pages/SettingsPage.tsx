@@ -52,7 +52,7 @@ export default function SettingsPage() {
   const [tz, setTz] = React.useState<AppTimezone>("Asia/Jakarta")
 
   React.useEffect(() => {
-    const v = tzQ.data?.data?.timezone
+    const v = tzQ.data?.timezone
     if (v) setTz(v)
   }, [tzQ.data])
 
@@ -104,7 +104,7 @@ export default function SettingsPage() {
                 Simpan
               </Button>
               <div className="text-sm text-muted-foreground">
-                Tahun berjalan (berdasarkan timezone): {tzQ.data?.data?.current_year ?? "-"}
+                Tahun berjalan (berdasarkan timezone): {tzQ.data?.current_year ?? "-"}
               </div>
             </div>
 

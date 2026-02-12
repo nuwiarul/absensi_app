@@ -5,9 +5,10 @@ use crate::database::attendance::{AddAttendanceEvent, AttendanceEventRepo};
 use crate::database::attendance_session::AttendanceSessionRepo;
 use crate::database::user::UserRepo;
 use crate::dtos::attendance::{AttendanceRekapDto, AttendanceRekapDtoResp};
+use crate::dtos::attendance_admin::AttendanceAdminResp;
 use crate::error::HttpError;
 use crate::middleware::auth_middleware::AuthMiddleware;
-use axum::extract::{Path};
+use axum::extract::Path;
 use axum::response::IntoResponse;
 use axum::routing::{delete, put};
 use axum::{Extension, Json, Router};
@@ -16,7 +17,6 @@ use serde::Deserialize;
 use std::sync::Arc;
 use uuid::Uuid;
 use validator::Validate;
-use crate::dtos::attendance_admin::AttendanceAdminResp;
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct UpsertAttendanceAdminReq {
@@ -48,7 +48,10 @@ pub fn attendance_admin_handler() -> Router {
         .route("/{user_id}/{work_date}", delete(delete_admin))
 }
 
-fn ensure_attendance_admin_access(user_claims: &AuthMiddleware, target_satker_id: Uuid) -> Result<(), HttpError> {
+fn ensure_attendance_admin_access(
+    user_claims: &AuthMiddleware,
+    target_satker_id: Uuid,
+) -> Result<(), HttpError> {
     match user_claims.user_claims.role {
         UserRole::Superadmin => Ok(()),
         UserRole::SatkerAdmin => {
@@ -83,12 +86,12 @@ pub async fn upsert_admin(
     }
 
     // VALIDASI tambahan: jika kedua waktu diisi, check-out tidak boleh lebih awal
-    if let (Some(cin), Some(cout)) = (payload.check_in_at, payload.check_out_at) {
-        if cout < cin {
-            return Err(HttpError::bad_request(
-                "check_out_at tidak boleh lebih awal dari check_in_at".to_string(),
-            ));
-        }
+    if let (Some(cin), Some(cout)) = (payload.check_in_at, payload.check_out_at)
+        && cout < cin
+    {
+        return Err(HttpError::bad_request(
+            "check_out_at tidak boleh lebih awal dari check_in_at".to_string(),
+        ));
     }
 
     let user = app_state
@@ -154,7 +157,9 @@ pub async fn upsert_admin(
             android_version: None,
             app_build: None,
             server_challenge_id: None,
-            attendance_leave_type: payload.check_in_leave_type.unwrap_or(AttendanceLeaveType::Normal),
+            attendance_leave_type: payload
+                .check_in_leave_type
+                .unwrap_or(AttendanceLeaveType::Normal),
             attendance_leave_notes: payload.check_in_leave_notes.clone(),
         };
 
@@ -186,7 +191,9 @@ pub async fn upsert_admin(
             android_version: None,
             app_build: None,
             server_challenge_id: None,
-            attendance_leave_type: payload.check_out_leave_type.unwrap_or(AttendanceLeaveType::Normal),
+            attendance_leave_type: payload
+                .check_out_leave_type
+                .unwrap_or(AttendanceLeaveType::Normal),
             attendance_leave_notes: payload.check_out_leave_notes.clone(),
         };
 
@@ -203,7 +210,9 @@ pub async fn upsert_admin(
         .await
         .map_err(|e| HttpError::server_error(e.to_string()))?;
 
-    let row = row.ok_or(HttpError::server_error("gagal memuat rekap setelah update".to_string()))?;
+    let row = row.ok_or(HttpError::server_error(
+        "gagal memuat rekap setelah update".to_string(),
+    ))?;
 
     Ok(Json(AttendanceRekapDtoResp {
         status: "200",
@@ -237,7 +246,6 @@ pub async fn delete_admin(
         data: affected,
     }))
 }
-
 
 /*use crate::AppState;
 use crate::auth::rbac::UserRole;

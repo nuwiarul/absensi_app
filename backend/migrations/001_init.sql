@@ -283,6 +283,10 @@ CREATE TRIGGER trg_att_sess_updated
     FOR EACH ROW
 EXECUTE FUNCTION set_updated_at();
 
+INSERT INTO satkers (id, code, name)
+VALUES ('11111111-1111-1111-1111-111111111111', '111111', 'Superuser Satker');
+
+
 INSERT INTO users (id, satker_id, nrp, full_name, email, role, password_hash, is_active)
 VALUES ('11111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', 'superuser', 'Superuser',
         'superuser@resta-pontianak.my.id', 'SUPERADMIN', '$argon2id$v=19$m=4096,t=3,p=1$FUsYOU8WAveGD2K899+Nlw$lkuGOpdcUFgJm85ZO8BPLIMUMrA65KQf3ciGJDTF1VQ', true);

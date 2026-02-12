@@ -1,23 +1,23 @@
+use crate::auth::rbac::UserRole;
+use crate::models::{Satker, User};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
-use crate::auth::rbac::UserRole;
-use crate::dtos::satker::SatkerDto;
-use crate::error::HttpError;
-use crate::models::{Satker, User};
 
 #[derive(Deserialize, Debug, Clone, Validate)]
 pub struct LoginReq {
     #[validate(length(min = 4, message = "username di butuhkan"))]
     pub username: String,
-    #[validate(
-        length(min = 8, max=64, message = "password harus di antara 8 sampai 64 karakter."),
-    )]
+    #[validate(length(
+        min = 8,
+        max = 64,
+        message = "password harus di antara 8 sampai 64 karakter."
+    ))]
     pub password: String,
 }
 
 #[derive(Serialize, Debug, Clone)]
 pub struct LoginDto {
-    pub id : String,
+    pub id: String,
     pub nrp: String,
     pub full_name: String,
     pub token: String,

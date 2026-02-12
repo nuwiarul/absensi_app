@@ -1,0 +1,88 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                a.id,\n                a.scope,\n                a.satker_id,\n                s.name as \"satker_name?\",\n                s.code as \"satker_code?\",\n                a.title,\n                a.body,\n                a.is_active,\n                a.created_by,\n                u.full_name as created_by_name,\n                a.created_at,\n                a.updated_at\n            FROM announcements a\n            LEFT JOIN satkers s ON a.satker_id = s.id\n            JOIN users u ON a.created_by = u.id\n            WHERE\n                a.is_active = true AND\n                (\n                    a.scope = 'GLOBAL' OR\n                    (a.scope = 'SATKER' AND a.satker_id = $1)\n                )\n            ORDER BY a.created_at DESC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "scope",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "satker_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "satker_name?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "satker_code?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "body",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "is_active",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "created_by",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 9,
+        "name": "created_by_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 11,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "0907bb8af669de230cd79d5cda0cbf68f5df4f0ee28e90b7b266ff81ba235803"
+}

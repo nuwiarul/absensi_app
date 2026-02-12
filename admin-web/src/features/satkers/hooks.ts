@@ -1,6 +1,6 @@
 // src/features/satkers/hooks.ts
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { toast } from "sonner"
+import { useQuery } from "@tanstack/react-query"
+import { useToastMutation } from "@/hooks/use-toast-mutation"
 import { createSatker, deleteSatker, listSatkers, updateSatker } from "./api"
 import type { CreateSatkerReq, UpdateSatkerReq } from "./types"
 
@@ -16,34 +16,25 @@ export function useSatkers() {
 }
 
 export function useCreateSatker() {
-  const qc = useQueryClient()
-  return useMutation({
+  return useToastMutation({
     mutationFn: (body: CreateSatkerReq) => createSatker(body),
-    onSuccess: () => {
-      toast.success("Satker berhasil dibuat")
-      qc.invalidateQueries({ queryKey: satkersKeys.all })
-    },
+    successMessage: "Satker berhasil dibuat",
+    invalidateQueries: [satkersKeys.all],
   })
 }
 
 export function useUpdateSatker() {
-  const qc = useQueryClient()
-  return useMutation({
+  return useToastMutation({
     mutationFn: ({ id, body }: { id: string; body: UpdateSatkerReq }) => updateSatker(id, body),
-    onSuccess: () => {
-      toast.success("Satker berhasil diupdate")
-      qc.invalidateQueries({ queryKey: satkersKeys.all })
-    },
+    successMessage: "Satker berhasil diupdate",
+    invalidateQueries: [satkersKeys.all],
   })
 }
 
 export function useDeleteSatker() {
-  const qc = useQueryClient()
-  return useMutation({
+  return useToastMutation({
     mutationFn: (id: string) => deleteSatker(id),
-    onSuccess: () => {
-      toast.success("Satker berhasil dihapus")
-      qc.invalidateQueries({ queryKey: satkersKeys.all })
-    },
+    successMessage: "Satker berhasil dihapus",
+    invalidateQueries: [satkersKeys.all],
   })
 }

@@ -1,8 +1,8 @@
-use axum::{Extension, Json, Router};
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
-use axum::routing::{get, post, put};
-use chrono::{DateTime, Utc, Datelike, TimeZone};
+use axum::routing::{get, put};
+use axum::{Extension, Json, Router};
+use chrono::{DateTime, Datelike, TimeZone, Utc};
 use chrono_tz::Tz;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -58,7 +58,10 @@ fn validate_start_date_not_before_today(start_at: DateTime<Utc>, tz: Tz) -> Resu
     Ok(())
 }
 
-fn validate_duration_max_24h(start_at: DateTime<Utc>, end_at: DateTime<Utc>) -> Result<(), HttpError> {
+fn validate_duration_max_24h(
+    start_at: DateTime<Utc>,
+    end_at: DateTime<Utc>,
+) -> Result<(), HttpError> {
     if end_at <= start_at {
         return Err(HttpError::bad_request(
             "end_at harus lebih besar dari start_at".to_string(),
@@ -86,7 +89,11 @@ pub async fn list_requests(
     });
 
     let to = query.to.unwrap_or_else(|| {
-        let (y, m) = if now.month() == 12 { (now.year() + 1, 1) } else { (now.year(), now.month() + 1) };
+        let (y, m) = if now.month() == 12 {
+            (now.year() + 1, 1)
+        } else {
+            (now.year(), now.month() + 1)
+        };
         Utc.with_ymd_and_hms(y, m, 1, 0, 0, 0).unwrap()
     });
 
@@ -117,7 +124,10 @@ pub async fn list_requests(
     if user_claims.user_claims.role == UserRole::SatkerHead {
         let ok = app_state
             .db_client
-            .is_current_head_satker(user_claims.user_claims.satker_id, user_claims.user_claims.user_id)
+            .is_current_head_satker(
+                user_claims.user_claims.satker_id,
+                user_claims.user_claims.user_id,
+            )
             .await
             .map_err(|e| HttpError::server_error(e.to_string()))?;
         if !ok {
@@ -134,7 +144,10 @@ pub async fn list_requests(
         .await
         .map_err(|e| HttpError::server_error(e.to_string()))?;
 
-    Ok(Json(DutyScheduleRequestsResp { status: "200", data: rows }))
+    Ok(Json(DutyScheduleRequestsResp {
+        status: "200",
+        data: rows,
+    }))
 }
 
 pub async fn create_request(
@@ -223,10 +236,10 @@ pub async fn cancel_request(
         r#"SELECT id, user_id, status FROM duty_schedule_requests WHERE id = $1 FOR UPDATE"#,
         id
     )
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(|e| HttpError::server_error(e.to_string()))?
-        .ok_or_else(|| HttpError::bad_request("pengajuan jadwal dinas tidak ditemukan".to_string()))?;
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(|e| HttpError::server_error(e.to_string()))?
+    .ok_or_else(|| HttpError::bad_request("pengajuan jadwal dinas tidak ditemukan".to_string()))?;
 
     if row.user_id != user_claims.user_claims.user_id {
         return Err(HttpError::unauthorized("forbidden"));
@@ -262,7 +275,10 @@ pub async fn approve_request(
 ) -> Result<impl IntoResponse, HttpError> {
     // Only admin roles
     let role = user_claims.user_claims.role;
-    if !(role == UserRole::Superadmin || role == UserRole::SatkerAdmin || role == UserRole::SatkerHead) {
+    if !(role == UserRole::Superadmin
+        || role == UserRole::SatkerAdmin
+        || role == UserRole::SatkerHead)
+    {
         return Err(HttpError::unauthorized("forbidden"));
     }
 
@@ -332,10 +348,10 @@ pub async fn approve_request(
         req_row.start_at,
         req_row.end_at
     )
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(|e| HttpError::server_error(e.to_string()))?
-        .is_some();
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(|e| HttpError::server_error(e.to_string()))?
+    .is_some();
 
     if has_overlap {
         // auto reject (tidak masuk duty_schedules)
@@ -390,9 +406,9 @@ pub async fn approve_request(
         req_row.note,
         req_row.user_id, // ✅ created_by = pemohon
     )
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| HttpError::server_error(e.to_string()))?;
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| HttpError::server_error(e.to_string()))?;
 
     sqlx::query!(
         r#"
@@ -403,9 +419,9 @@ pub async fn approve_request(
         id,
         user_claims.user_claims.user_id // admin approver
     )
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| HttpError::server_error(e.to_string()))?;
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| HttpError::server_error(e.to_string()))?;
 
     tx.commit()
         .await
@@ -424,7 +440,10 @@ pub async fn reject_request(
     Json(payload): Json<RejectDutyScheduleRequestReq>,
 ) -> Result<impl IntoResponse, HttpError> {
     let role = user_claims.user_claims.role;
-    if !(role == UserRole::Superadmin || role == UserRole::SatkerAdmin || role == UserRole::SatkerHead) {
+    if !(role == UserRole::Superadmin
+        || role == UserRole::SatkerAdmin
+        || role == UserRole::SatkerHead)
+    {
         return Err(HttpError::unauthorized("forbidden"));
     }
 
@@ -443,10 +462,10 @@ pub async fn reject_request(
         r#"SELECT id, satker_id, status FROM duty_schedule_requests WHERE id = $1 FOR UPDATE"#,
         id
     )
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(|e| HttpError::server_error(e.to_string()))?
-        .ok_or_else(|| HttpError::bad_request("pengajuan jadwal dinas tidak ditemukan".to_string()))?;
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(|e| HttpError::server_error(e.to_string()))?
+    .ok_or_else(|| HttpError::bad_request("pengajuan jadwal dinas tidak ditemukan".to_string()))?;
 
     if !can_manage_duty_schedules(&user_claims.user_claims, req_row.satker_id) {
         return Err(HttpError::unauthorized("forbidden"));

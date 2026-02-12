@@ -1,0 +1,111 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO satker_work_patterns (\n              satker_id,\n              effective_from,\n              mon_work,\n              tue_work,\n              wed_work,\n              thu_work,\n              fri_work,\n              sat_work,\n              sun_work,\n              work_start,\n              work_end,\n              half_day_end\n            )\n            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)\n            ON CONFLICT (satker_id, effective_from) DO UPDATE SET\n              mon_work = EXCLUDED.mon_work,\n              tue_work = EXCLUDED.tue_work,\n              wed_work = EXCLUDED.wed_work,\n              thu_work = EXCLUDED.thu_work,\n              fri_work = EXCLUDED.fri_work,\n              sat_work = EXCLUDED.sat_work,\n              sun_work = EXCLUDED.sun_work,\n              work_start = EXCLUDED.work_start,\n              work_end = EXCLUDED.work_end,\n              half_day_end = EXCLUDED.half_day_end\n            RETURNING\n              id,\n              satker_id,\n              effective_from,\n              mon_work,\n              tue_work,\n              wed_work,\n              thu_work,\n              fri_work,\n              sat_work,\n              sun_work,\n              work_start,\n              work_end,\n              half_day_end,\n              created_at\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "satker_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "effective_from",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 3,
+        "name": "mon_work",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 4,
+        "name": "tue_work",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
+        "name": "wed_work",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "thu_work",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "fri_work",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "sat_work",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 9,
+        "name": "sun_work",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 10,
+        "name": "work_start",
+        "type_info": "Time"
+      },
+      {
+        "ordinal": 11,
+        "name": "work_end",
+        "type_info": "Time"
+      },
+      {
+        "ordinal": 12,
+        "name": "half_day_end",
+        "type_info": "Time"
+      },
+      {
+        "ordinal": 13,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Date",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Time",
+        "Time",
+        "Time"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "c3a8a1015df6c062047dddf0b8d097ddaa50109fc6025a008d1f8b282d681481"
+}

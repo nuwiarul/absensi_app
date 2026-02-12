@@ -1,0 +1,103 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO tukin_calculations (\n              month, satker_id, user_id, policy_id,\n              base_tukin, expected_units, earned_credit, attendance_ratio, final_tukin,\n              breakdown\n            ) VALUES (\n              $1, $2, $3, $4,\n              $5, $6, $7, $8, $9,\n              $10\n            )\n            ON CONFLICT (month, user_id) DO UPDATE\n            SET\n              satker_id = EXCLUDED.satker_id,\n              policy_id = EXCLUDED.policy_id,\n              base_tukin = EXCLUDED.base_tukin,\n              expected_units = EXCLUDED.expected_units,\n              earned_credit = EXCLUDED.earned_credit,\n              attendance_ratio = EXCLUDED.attendance_ratio,\n              final_tukin = EXCLUDED.final_tukin,\n              breakdown = EXCLUDED.breakdown,\n              updated_at = now()\n            RETURNING\n              id,\n              month,\n              satker_id,\n              user_id,\n              policy_id,\n              base_tukin,\n              expected_units,\n              earned_credit,\n              attendance_ratio,\n              final_tukin,\n              breakdown as \"breakdown: JsonValue\",\n              created_at,\n              updated_at\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "month",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 2,
+        "name": "satker_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "policy_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "base_tukin",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 6,
+        "name": "expected_units",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 7,
+        "name": "earned_credit",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 8,
+        "name": "attendance_ratio",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 9,
+        "name": "final_tukin",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 10,
+        "name": "breakdown: JsonValue",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 11,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 12,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Date",
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Int8",
+        "Float8",
+        "Float8",
+        "Float8",
+        "Int8",
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "2108187c8078130f1f5b59baec8b2bb11b9b8de7f3c8f7366e5adbf17d3d3b65"
+}

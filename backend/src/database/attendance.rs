@@ -1,11 +1,11 @@
 use crate::DBClient;
 use crate::constants::{AttendanceEventType, AttendanceLeaveType};
-use crate::models::{AttendanceEvent, Satker};
+use crate::dtos::attendance::AttendanceRekapDto;
+use crate::models::AttendanceEvent;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
 use sqlx::Error;
 use uuid::Uuid;
-use crate::dtos::attendance::AttendanceRekapDto;
 
 pub struct AddAttendanceEvent {
     pub session_id: Uuid,
@@ -33,7 +33,6 @@ pub struct AddAttendanceEvent {
 
     pub attendance_leave_type: AttendanceLeaveType,
     pub attendance_leave_notes: Option<String>,
-
 }
 
 #[async_trait]
@@ -59,14 +58,12 @@ pub trait AttendanceEventRepo {
         to: NaiveDate,
     ) -> Result<Vec<AttendanceRekapDto>, Error>;
 
-
     /// Delete an attendance event (CHECK_IN / CHECK_OUT) by session and type.
     async fn delete_attendance_event_by_session_type(
         &self,
         session_id: Uuid,
         event_type: AttendanceEventType,
     ) -> Result<u64, Error>;
-
 }
 
 #[async_trait]
@@ -224,7 +221,8 @@ impl AttendanceEventRepo for DBClient {
             "#,
             work_date,
             user_id
-        ).fetch_optional(&self.pool)
+        )
+        .fetch_optional(&self.pool)
         .await?;
         Ok(row)
     }
@@ -293,8 +291,9 @@ impl AttendanceEventRepo for DBClient {
             from,
             to,
             user_id
-        ).fetch_all(&self.pool)
-            .await?;
+        )
+        .fetch_all(&self.pool)
+        .await?;
         Ok(rows)
     }
 
@@ -308,8 +307,8 @@ impl AttendanceEventRepo for DBClient {
             session_id,
             event_type as AttendanceEventType,
         )
-            .execute(&self.pool)
-            .await?;
+        .execute(&self.pool)
+        .await?;
 
         Ok(res.rows_affected())
     }

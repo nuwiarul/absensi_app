@@ -83,7 +83,7 @@ export function getNavGroups(role?: Role): NavGroup[] {
     return GROUPS.map((g) => {
         const items = g.items
             .filter((it) => it.roles.includes(r))
-            .map(({ roles, ...rest }) => rest)
+            .map(({ label, to }) => ({ label, to }))
         return { key: g.key, label: g.label, items }
     }).filter((g) => g.items.length > 0)
 }

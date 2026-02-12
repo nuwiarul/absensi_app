@@ -1,29 +1,30 @@
-use std::path::PathBuf;
-use std::sync::Arc;
+use crate::config::config::Config;
+use crate::db::DBClient;
+use crate::routes::create_router;
 use axum::http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use axum::http::{HeaderName, Method};
 use redis::aio::ConnectionManager;
 use sqlx::postgres::PgPoolOptions;
+use std::path::PathBuf;
+use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 use tracing_subscriber::filter::LevelFilter;
-use crate::config::config::Config;
-use crate::db::DBClient;
-use crate::routes::create_router;
 
 // alias runwib="TZ=Asia/Jakarta faketime"
 
-mod error;
-mod utils;
-mod config;
-mod db;
 mod auth;
-mod routes;
-mod models;
+mod config;
+mod constants;
 mod database;
+mod db;
 mod dtos;
+mod error;
 mod handler;
 mod middleware;
-mod constants;
+mod models;
+mod routes;
+mod services;
+mod utils;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -51,7 +52,7 @@ async fn main() {
         Ok(pool) => {
             println!("Successfully connected to database");
             pool
-        },
+        }
         Err(err) => {
             println!("Failed to connect database : {}", err);
             std::process::exit(1);
@@ -96,10 +97,11 @@ async fn main() {
 
     let app = create_router(Arc::new(app_state.clone())).layer(cors.clone());
 
-    println!("{}", format!("Server is running on http://localhost:{}", config.port));
+    println!("Server is running on http://localhost:{}", config.port);
 
-    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", config.port)).await.unwrap();
+    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", config.port))
+        .await
+        .unwrap();
 
     axum::serve(listener, app).await.unwrap();
-
 }

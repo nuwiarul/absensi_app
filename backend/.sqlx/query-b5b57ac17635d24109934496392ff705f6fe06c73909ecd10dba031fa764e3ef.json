@@ -1,0 +1,114 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n              to_char(tc.month, 'YYYY-MM') as \"month!\",\n              tc.satker_id,\n              st.code as \"satker_code?\",\n              st.name as \"satker_name?\",\n\n              tc.user_id,\n              u.full_name as \"user_full_name!\",\n              u.nrp as \"user_nrp!\",\n\n              r.code as \"rank_code?\",\n              r.name as \"rank_name?\",\n\n              tc.base_tukin,\n              tc.expected_units,\n              tc.earned_credit,\n              tc.attendance_ratio,\n              tc.final_tukin,\n\n              tc.breakdown as \"breakdown: JsonValue\",\n              tc.updated_at\n            FROM tukin_calculations tc\n            JOIN users u ON u.id = tc.user_id\n            JOIN satkers st ON st.id = tc.satker_id\n            LEFT JOIN ranks r ON r.id = u.rank_id\n            WHERE tc.month = $1\n              AND ($2::uuid IS NULL OR tc.satker_id = $2)\n              AND ($3::uuid IS NULL OR tc.user_id = $3)\n            ORDER BY tc.final_tukin DESC, tc.user_id ASC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "month!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "satker_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "satker_code?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "satker_name?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "user_full_name!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "user_nrp!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "rank_code?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "rank_name?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "base_tukin",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 10,
+        "name": "expected_units",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 11,
+        "name": "earned_credit",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 12,
+        "name": "attendance_ratio",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 13,
+        "name": "final_tukin",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 14,
+        "name": "breakdown: JsonValue",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 15,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Date",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "b5b57ac17635d24109934496392ff705f6fe06c73909ecd10dba031fa764e3ef"
+}

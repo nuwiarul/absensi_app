@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT 1 as one\n            FROM duty_schedule_requests\n            WHERE satker_id = $1\n              AND user_id = $2\n              AND status = 'SUBMITTED'\n              AND start_at < $4\n              AND end_at > $3\n              AND ($5::uuid IS NULL OR id <> $5)\n            LIMIT 1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "one",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Timestamptz",
+        "Timestamptz",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "c196de6b37e76130292ff446db12e943afe7084c142b819a7fa531472f11fc24"
+}

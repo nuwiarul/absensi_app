@@ -75,8 +75,7 @@ Jika kamu menemukan 2+ lokasi dengan logic mirip:
 ## 7. Standar Kualitas (Wajib)
 Sebelum PR/patch selesai:
 - `cargo fmt`
-- `cargo fmt`
-- `cargo clippy` (perbaiki lint yang jelas)
+- `cargo check`
 - Tidak ada unused import/variable.
 - Tidak ada duplikasi logic.
 

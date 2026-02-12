@@ -278,9 +278,6 @@ export default function DutySchedulesPage() {
   const now = new Date()
   const def = React.useMemo(() => defaultRange(now), [])
 
-  const monthMin = React.useMemo(() => ymd(startOfMonth(now)), [])
-  const monthMax = React.useMemo(() => ymd(endOfMonth(now)), [])
-
   const [fromYmd, setFromYmd] = React.useState(def.from)
   const [toYmd, setToYmd] = React.useState(def.to)
 

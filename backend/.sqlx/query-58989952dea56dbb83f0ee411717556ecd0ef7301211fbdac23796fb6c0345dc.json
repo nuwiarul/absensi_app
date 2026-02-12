@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE duty_schedules\n            SET\n                start_at = COALESCE($2, start_at),\n                end_at = COALESCE($3, end_at),\n                schedule_date = COALESCE(( $2 AT TIME ZONE 'UTC')::date, schedule_date),\n                start_time = COALESCE(( $2 AT TIME ZONE 'UTC')::time, start_time),\n                end_time = COALESCE(( $3 AT TIME ZONE 'UTC')::time, end_time),\n                type = COALESCE($4::schedule_type, type),\n                title = COALESCE($5, title),\n                notes = COALESCE($6, notes),\n                updated_at = now()\n            WHERE id = $1 AND deleted_at IS NULL\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamptz",
+        "Timestamptz",
+        {
+          "Custom": {
+            "name": "schedule_type",
+            "kind": {
+              "Enum": [
+                "REGULAR",
+                "SHIFT",
+                "ON_CALL",
+                "SPECIAL"
+              ]
+            }
+          }
+        },
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "58989952dea56dbb83f0ee411717556ecd0ef7301211fbdac23796fb6c0345dc"
+}

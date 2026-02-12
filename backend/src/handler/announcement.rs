@@ -1,7 +1,7 @@
-use axum::{Extension, Json, Router};
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
-use axum::routing::{get, post, put, delete};
+use axum::routing::{delete, get, post, put};
+use axum::{Extension, Json, Router};
 use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
@@ -49,7 +49,10 @@ async fn list_manageable(
     Query(_q): Query<ListManageQuery>,
 ) -> Result<impl IntoResponse, HttpError> {
     // Allow admins & heads to view list, but only admins can create/update.
-    if !matches!(auth.user_claims.role, UserRole::Superadmin | UserRole::SatkerAdmin | UserRole::SatkerHead) {
+    if !matches!(
+        auth.user_claims.role,
+        UserRole::Superadmin | UserRole::SatkerAdmin | UserRole::SatkerHead
+    ) {
         return Err(HttpError::unauthorized("Unauthorized".to_string()));
     }
 
@@ -87,7 +90,9 @@ async fn create(
     match scope {
         "GLOBAL" => {
             if auth.user_claims.role != UserRole::Superadmin {
-                return Err(HttpError::unauthorized("Hanya SUPERADMIN yang bisa membuat pengumuman GLOBAL".to_string()));
+                return Err(HttpError::unauthorized(
+                    "Hanya SUPERADMIN yang bisa membuat pengumuman GLOBAL".to_string(),
+                ));
             }
             req.satker_id = None;
         }
@@ -98,7 +103,9 @@ async fn create(
             } else {
                 // SUPERADMIN: must provide satker_id
                 if req.satker_id.is_none() {
-                    return Err(HttpError::bad_request("satker_id wajib untuk scope SATKER".to_string()));
+                    return Err(HttpError::bad_request(
+                        "satker_id wajib untuk scope SATKER".to_string(),
+                    ));
                 }
             }
         }
@@ -133,15 +140,21 @@ async fn update(
         .await
         .map_err(|_| HttpError::server_error("Server error".to_string()))?;
 
-    let existing = existing.ok_or(HttpError::bad_request("Pengumuman tidak ditemukan".to_string()))?;
+    let existing = existing.ok_or(HttpError::bad_request(
+        "Pengumuman tidak ditemukan".to_string(),
+    ))?;
 
     // SATKER_ADMIN can only update SATKER announcements in own satker, not GLOBAL
     if auth.user_claims.role == UserRole::SatkerAdmin {
         if existing.scope == "GLOBAL" {
-            return Err(HttpError::unauthorized("SATKER_ADMIN tidak boleh mengubah pengumuman GLOBAL".to_string()));
+            return Err(HttpError::unauthorized(
+                "SATKER_ADMIN tidak boleh mengubah pengumuman GLOBAL".to_string(),
+            ));
         }
         if existing.satker_id != Some(auth.user_claims.satker_id) {
-            return Err(HttpError::unauthorized("Tidak boleh mengubah pengumuman satker lain".to_string()));
+            return Err(HttpError::unauthorized(
+                "Tidak boleh mengubah pengumuman satker lain".to_string(),
+            ));
         }
         // Force scope SATKER and satker_id own
         req.scope = Some("SATKER".into());
@@ -167,7 +180,9 @@ async fn update(
         match scope.as_str() {
             "GLOBAL" => {
                 if auth.user_claims.role != UserRole::Superadmin {
-                    return Err(HttpError::unauthorized("Hanya SUPERADMIN yang bisa set scope GLOBAL".to_string()));
+                    return Err(HttpError::unauthorized(
+                        "Hanya SUPERADMIN yang bisa set scope GLOBAL".to_string(),
+                    ));
                 }
                 req.satker_id = None;
             }
@@ -206,14 +221,20 @@ async fn deactivate(
         .await
         .map_err(|_| HttpError::server_error("Server error".to_string()))?;
 
-    let existing = existing.ok_or(HttpError::bad_request("Pengumuman tidak ditemukan".to_string()))?;
+    let existing = existing.ok_or(HttpError::bad_request(
+        "Pengumuman tidak ditemukan".to_string(),
+    ))?;
 
     if auth.user_claims.role == UserRole::SatkerAdmin {
         if existing.scope == "GLOBAL" {
-            return Err(HttpError::unauthorized("SATKER_ADMIN tidak boleh menghapus pengumuman GLOBAL".to_string()));
+            return Err(HttpError::unauthorized(
+                "SATKER_ADMIN tidak boleh menghapus pengumuman GLOBAL".to_string(),
+            ));
         }
         if existing.satker_id != Some(auth.user_claims.satker_id) {
-            return Err(HttpError::unauthorized("Tidak boleh menghapus pengumuman satker lain".to_string()));
+            return Err(HttpError::unauthorized(
+                "Tidak boleh menghapus pengumuman satker lain".to_string(),
+            ));
         }
     }
 

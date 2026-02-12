@@ -1,7 +1,6 @@
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::dtos::leave_request::LeaveRequestDto;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct SetHeadReq {

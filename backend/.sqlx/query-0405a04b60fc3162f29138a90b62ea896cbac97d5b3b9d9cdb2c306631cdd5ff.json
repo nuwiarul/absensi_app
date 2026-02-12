@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO satker_heads (satker_id, user_id, active_from, active_to)\n        VALUES ($1, $2, CURRENT_DATE, NULL)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0405a04b60fc3162f29138a90b62ea896cbac97d5b3b9d9cdb2c306631cdd5ff"
+}

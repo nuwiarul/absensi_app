@@ -1,5 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { toast } from "sonner"
+import { useQuery } from "@tanstack/react-query"
+import { useToastMutation } from "@/hooks/use-toast-mutation"
 
 import {getUsers, createUser, updateUser, deleteUser, getUsersBySatker} from "./api"
 import type { CreateUserReq, UpdateUserReq } from "./types"
@@ -17,35 +17,26 @@ export function useUsers(satkerId?: string, enabled: boolean = true) {
 }
 
 export function useCreateUser() {
-  const qc = useQueryClient()
-  return useMutation({
+  return useToastMutation<string, unknown, CreateUserReq>({
     mutationFn: (payload: CreateUserReq) => createUser(payload),
-    onSuccess: (msg) => {
-      toast.success(msg || "User berhasil dibuat")
-      qc.invalidateQueries({ queryKey: usersKeys.all })
-    },
+    successMessage: (msg) => msg ?? "User berhasil dibuat",
+    invalidateQueries: [usersKeys.all],
   })
 }
 
 export function useUpdateUser() {
-  const qc = useQueryClient()
-  return useMutation({
+  return useToastMutation<string, unknown, { id: string; payload: UpdateUserReq }>({
     mutationFn: ({ id, payload }: { id: string; payload: UpdateUserReq }) =>
       updateUser(id, payload),
-    onSuccess: (msg) => {
-      toast.success(msg || "User berhasil diupdate")
-      qc.invalidateQueries({ queryKey: usersKeys.all })
-    },
+    successMessage: (msg) => msg ?? "User berhasil diupdate",
+    invalidateQueries: [usersKeys.all],
   })
 }
 
 export function useDeleteUser() {
-  const qc = useQueryClient()
-  return useMutation({
+  return useToastMutation<string, unknown, string>({
     mutationFn: (id: string) => deleteUser(id),
-    onSuccess: (msg) => {
-      toast.success(msg || "User berhasil dihapus")
-      qc.invalidateQueries({ queryKey: usersKeys.all })
-    },
+    successMessage: (msg) => msg ?? "User berhasil dihapus",
+    invalidateQueries: [usersKeys.all],
   })
 }

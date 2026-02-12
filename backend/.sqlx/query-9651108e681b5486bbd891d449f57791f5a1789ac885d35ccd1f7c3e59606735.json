@@ -1,0 +1,59 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO attendance_events (\n              session_id, satker_id, user_id, event_type, occurred_at,\n              latitude, longitude, accuracy_meters,\n              geofence_id, distance_to_fence_m,\n              selfie_object_key, liveness_score, face_match_score,\n              device_id, client_version, server_challenge_id,\n              device_model, android_version, app_build,\n              attendance_leave_type, attendance_leave_notes\n            )\n            VALUES (\n              $1, $2, $3, $4, $5,\n              $6, $7, $8,\n              $9, $10,\n              $11, $12, $13,\n              $14, $15, $16, $17, $18, $19,\n              $20, $21\n            )\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        {
+          "Custom": {
+            "name": "attendance_event_type",
+            "kind": {
+              "Enum": [
+                "CHECK_IN",
+                "CHECK_OUT"
+              ]
+            }
+          }
+        },
+        "Timestamptz",
+        "Float8",
+        "Float8",
+        "Float8",
+        "Uuid",
+        "Float8",
+        "Text",
+        "Float8",
+        "Float8",
+        "Text",
+        "Text",
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        {
+          "Custom": {
+            "name": "attendance_leave_type",
+            "kind": {
+              "Enum": [
+                "NORMAL",
+                "JADWAL_DINAS",
+                "DINAS_LUAR",
+                "WFA",
+                "WFH",
+                "IJIN",
+                "SAKIT"
+              ]
+            }
+          }
+        },
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9651108e681b5486bbd891d449f57791f5a1789ac885d35ccd1f7c3e59606735"
+}

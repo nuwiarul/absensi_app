@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE duty_schedules\n        SET\n          type = COALESCE($2::schedule_type, type),\n          start_time = COALESCE($3::time, start_time),\n          end_time = COALESCE($4::time, end_time),\n          notes = COALESCE($5, notes)\n        WHERE id = $1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        {
+          "Custom": {
+            "name": "schedule_type",
+            "kind": {
+              "Enum": [
+                "REGULAR",
+                "SHIFT",
+                "ON_CALL",
+                "SPECIAL"
+              ]
+            }
+          }
+        },
+        "Time",
+        "Time",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b0234f4edfeba5ce0b96a138593ad804bbda70d06a985333a3f37b45ebfb01b1"
+}

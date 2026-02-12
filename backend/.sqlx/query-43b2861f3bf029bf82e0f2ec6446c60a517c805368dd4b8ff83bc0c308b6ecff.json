@@ -1,0 +1,47 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT occurred_at, geofence_id, distance_to_fence_m\n            FROM attendance_events\n            WHERE user_id = $1\n              AND event_type = $2\n              AND occurred_at >= $3\n              AND occurred_at <= $4\n            ORDER BY occurred_at ASC\n            LIMIT 1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "occurred_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 1,
+        "name": "geofence_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "distance_to_fence_m",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        {
+          "Custom": {
+            "name": "attendance_event_type",
+            "kind": {
+              "Enum": [
+                "CHECK_IN",
+                "CHECK_OUT"
+              ]
+            }
+          }
+        },
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "43b2861f3bf029bf82e0f2ec6446c60a517c805368dd4b8ff83bc0c308b6ecff"
+}

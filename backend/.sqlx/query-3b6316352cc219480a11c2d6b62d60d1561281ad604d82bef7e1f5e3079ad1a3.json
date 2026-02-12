@@ -1,0 +1,210 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                lr.id,\n                s.name AS satker_name,\n                s.id AS satker_id,\n                s.code AS satker_code,\n                u.full_name AS user_full_name,\n                u.id AS user_id,\n                u.nrp AS user_nrp,\n                u.role AS \"role: UserRole\",\n                u.phone AS user_phone,\n                lr.tipe AS \"tipe: LeaveType\",\n                lr.start_date,\n                lr.end_date,\n                lr.reason,\n                lr.status AS \"status: LeaveStatus\",\n                lr.submitted_at,\n                lr.decided_at,\n                a.full_name AS \"approver_full_name?\",\n                a.id AS \"approver_id?\",\n                a.nrp AS \"approver_nrp?\",\n                a.role AS \"approver_role?: UserRole\",\n                a.phone AS \"approver_phone?\",\n                lr.decision_note,\n                lr.created_at,\n                lr.updated_at\n            FROM leave_requests lr\n            JOIN users u ON lr.user_id=u.id\n            JOIN satkers s ON lr.satker_id=s.id\n            LEFT JOIN users a ON lr.approver_id=a.id\n            WHERE\n                lr.status IN ('APPROVED','REJECTED') AND\n                lr.start_date >= $1 AND\n                lr.end_date <= $2\n            ORDER BY lr.decided_at DESC NULLS LAST, lr.created_at DESC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "satker_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "satker_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "satker_code",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "user_full_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "user_nrp",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "role: UserRole",
+        "type_info": {
+          "Custom": {
+            "name": "user_role",
+            "kind": {
+              "Enum": [
+                "SUPERADMIN",
+                "SATKER_ADMIN",
+                "SATKER_HEAD",
+                "MEMBER"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "user_phone",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "tipe: LeaveType",
+        "type_info": {
+          "Custom": {
+            "name": "leave_type",
+            "kind": {
+              "Enum": [
+                "IJIN",
+                "SAKIT",
+                "CUTI",
+                "DINAS_LUAR"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "start_date",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 11,
+        "name": "end_date",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 12,
+        "name": "reason",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 13,
+        "name": "status: LeaveStatus",
+        "type_info": {
+          "Custom": {
+            "name": "leave_status",
+            "kind": {
+              "Enum": [
+                "DRAFT",
+                "SUBMITTED",
+                "APPROVED",
+                "REJECTED",
+                "CANCELLED"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "submitted_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 15,
+        "name": "decided_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 16,
+        "name": "approver_full_name?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 17,
+        "name": "approver_id?",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 18,
+        "name": "approver_nrp?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 19,
+        "name": "approver_role?: UserRole",
+        "type_info": {
+          "Custom": {
+            "name": "user_role",
+            "kind": {
+              "Enum": [
+                "SUPERADMIN",
+                "SATKER_ADMIN",
+                "SATKER_HEAD",
+                "MEMBER"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "approver_phone?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 21,
+        "name": "decision_note",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 22,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 23,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Date",
+        "Date"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "3b6316352cc219480a11c2d6b62d60d1561281ad604d82bef7e1f5e3079ad1a3"
+}

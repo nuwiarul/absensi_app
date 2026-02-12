@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            DELETE FROM holidays\n            WHERE scope = $1\n              AND satker_id IS NOT DISTINCT FROM $2\n              AND holiday_date = $3\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        {
+          "Custom": {
+            "name": "holiday_scope",
+            "kind": {
+              "Enum": [
+                "NATIONAL",
+                "SATKER"
+              ]
+            }
+          }
+        },
+        "Uuid",
+        "Date"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "11765d131b1c314332a32741f0a10ff1d530a8b817a3a416920e282412a505fd"
+}

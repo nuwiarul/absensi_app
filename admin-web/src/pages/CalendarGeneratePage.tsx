@@ -1,5 +1,6 @@
 import * as React from "react"
 import { toast } from "sonner"
+import { apiErrorMessage } from "@/lib/api-error"
 import { getSession } from "@/lib/auth"
 import { useSatkers } from "@/features/satkers/hooks"
 import { SatkerSelect } from "@/features/users/SatkerSelect"
@@ -43,7 +44,7 @@ export default function CalendarGeneratePage() {
 
   const gen = useGenerateCalendar()
 
-  const curYear = tzQ.data?.data?.current_year ?? new Date().getFullYear()
+  const curYear = tzQ.data?.current_year ?? new Date().getFullYear()
   const [year, setYear] = React.useState<number>(curYear)
 
   const setFullYear = (y: number) => {
@@ -67,7 +68,7 @@ export default function CalendarGeneratePage() {
       const days = await gen.mutateAsync({ satkerId, from, to })
       toast.success(`Calendar generated: ${days} hari`)
     } catch (e: unknown) {
-      toast.error(e?.response?.data?.message ?? "Gagal generate calendar")
+      toast.error(apiErrorMessage(e, { fallbackMessage: "Gagal generate calendar" }))
     }
   }
 

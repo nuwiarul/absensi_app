@@ -80,7 +80,7 @@ export default function HolidaysBulkPage() {
   React.useEffect(() => {
     // Avoid UTC date-shift bugs (e.g. 31 Dec prev year) by using plain YYYY-MM-DD.
     if (from && to) return
-    const yearNow = tzQ.data?.data?.current_year ?? new Date().getFullYear()
+    const yearNow = tzQ.data?.current_year ?? new Date().getFullYear()
     setFrom(`${yearNow}-01-01`)
     setTo(`${yearNow}-12-31`)
   }, [tzQ.data, from, to])

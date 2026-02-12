@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT COALESCE(r.tukin_base, 0) as tukin_base\n            FROM users u\n            LEFT JOIN ranks r ON u.rank_id = r.id\n            WHERE u.id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "tukin_base",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "93e97d83828d2d608c2b05b20eef1dd24050ce5cabc51f6146744804a306ea0f"
+}

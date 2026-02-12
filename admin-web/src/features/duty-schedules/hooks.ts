@@ -1,5 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { toast } from "sonner"
+import { useToastMutation } from "@/hooks/use-toast-mutation"
+import { apiErrorMessage } from "@/lib/api-error"
 
 import {
   createDutySchedule,
@@ -8,6 +10,7 @@ import {
   updateDutySchedule,
 } from "./api"
 import type {
+  ApiResponse,
   CreateDutyScheduleReq,
   ListDutySchedulesQuery,
   UpdateDutyScheduleReq,
@@ -27,114 +30,35 @@ export function useDutySchedules(params: ListDutySchedulesQuery, enabled: boolea
 }
 
 export function useCreateDutySchedule() {
-  const qc = useQueryClient()
-  return useMutation({
+  return useToastMutation<ApiResponse<string>, unknown, CreateDutyScheduleReq>({
     mutationFn: (payload: CreateDutyScheduleReq) => createDutySchedule(payload),
-    onSuccess: (r) => {
-      toast.success(r.data || "Jadwal dinas berhasil dibuat")
-      qc.invalidateQueries({ queryKey: dutySchedulesKeys.all })
-    },
-    onError: (e: any) => {
-      toast.error(e?.response?.data?.message || e?.message || "Gagal membuat jadwal dinas")
+    successMessage: (r) => r.data || "Jadwal dinas berhasil dibuat",
+    invalidateQueries: [dutySchedulesKeys.all],
+    onError: (err: unknown) => {
+      toast.error(apiErrorMessage(err, { fallbackMessage: "Gagal membuat jadwal dinas" }))
     },
   })
 }
 
 export function useUpdateDutySchedule() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: UpdateDutyScheduleReq }) => updateDutySchedule(id, payload),
-    onSuccess: (r) => {
-      toast.success(r.data || "Jadwal dinas berhasil diupdate")
-      qc.invalidateQueries({ queryKey: dutySchedulesKeys.all })
-    },
-    onError: (e: any) => {
-      toast.error(e?.response?.data?.message || e?.message || "Gagal mengupdate jadwal dinas")
+  return useToastMutation<ApiResponse<string>, unknown, { id: string; payload: UpdateDutyScheduleReq }>({
+    mutationFn: ({ id, payload }: { id: string; payload: UpdateDutyScheduleReq }) =>
+      updateDutySchedule(id, payload),
+    successMessage: (r) => r.data || "Jadwal dinas berhasil diupdate",
+    invalidateQueries: [dutySchedulesKeys.all],
+    onError: (err: unknown) => {
+      toast.error(apiErrorMessage(err, { fallbackMessage: "Gagal mengupdate jadwal dinas" }))
     },
   })
 }
 
 export function useDeleteDutySchedule() {
-  const qc = useQueryClient()
-  return useMutation({
+  return useToastMutation<ApiResponse<string>, unknown, string>({
     mutationFn: (id: string) => deleteDutySchedule(id),
-    onSuccess: (r) => {
-      toast.success(r.data || "Jadwal dinas berhasil dihapus")
-      qc.invalidateQueries({ queryKey: dutySchedulesKeys.all })
-    },
-    onError: (e: any) => {
-      toast.error(e?.response?.data?.message || e?.message || "Gagal menghapus jadwal dinas")
+    successMessage: (r) => r.data || "Jadwal dinas berhasil dihapus",
+    invalidateQueries: [dutySchedulesKeys.all],
+    onError: (err: unknown) => {
+      toast.error(apiErrorMessage(err, { fallbackMessage: "Gagal menghapus jadwal dinas" }))
     },
   })
 }
-
-/*
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { toast } from "sonner"
-
-import {
-  createDutySchedule,
-  deleteDutySchedule,
-  listDutySchedules,
-  updateDutySchedule,
-} from "./api"
-import type {
-  CreateDutyScheduleReq,
-  ListDutySchedulesQuery,
-  UpdateDutyScheduleReq,
-} from "./types"
-
-export const dutySchedulesKeys = {
-  all: ["duty-schedules"] as const,
-}
-
-export function useDutySchedules(params: ListDutySchedulesQuery) {
-  return useQuery({
-    queryKey: ["duty-schedules", params],
-    queryFn: () => listDutySchedules(params),
-    staleTime: 10_000,
-  })
-}
-
-export function useCreateDutySchedule() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (payload: CreateDutyScheduleReq) => createDutySchedule(payload),
-    onSuccess: (r) => {
-      toast.success(r.data || "Jadwal dinas berhasil dibuat")
-      qc.invalidateQueries({ queryKey: dutySchedulesKeys.all })
-    },
-    onError: (e: any) => {
-      toast.error(e?.response?.data?.message || e?.message || "Gagal membuat jadwal dinas")
-    },
-  })
-}
-
-export function useUpdateDutySchedule() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: UpdateDutyScheduleReq }) => updateDutySchedule(id, payload),
-    onSuccess: (r) => {
-      toast.success(r.data || "Jadwal dinas berhasil diupdate")
-      qc.invalidateQueries({ queryKey: dutySchedulesKeys.all })
-    },
-    onError: (e: any) => {
-      toast.error(e?.response?.data?.message || e?.message || "Gagal mengupdate jadwal dinas")
-    },
-  })
-}
-
-export function useDeleteDutySchedule() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (id: string) => deleteDutySchedule(id),
-    onSuccess: (r) => {
-      toast.success(r.data || "Jadwal dinas berhasil dihapus")
-      qc.invalidateQueries({ queryKey: dutySchedulesKeys.all })
-    },
-    onError: (e: any) => {
-      toast.error(e?.response?.data?.message || e?.message || "Gagal menghapus jadwal dinas")
-    },
-  })
-}
-*/

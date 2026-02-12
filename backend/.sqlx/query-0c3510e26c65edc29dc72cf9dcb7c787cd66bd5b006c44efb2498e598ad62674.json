@@ -1,0 +1,47 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        WITH checked AS (\n            SELECT s.work_date, u.satker_id, COUNT(DISTINCT s.user_id)::bigint AS checked_in_count\n            FROM attendance_sessions s\n            JOIN users u ON u.id = s.user_id\n            WHERE s.work_date = $1\n              AND s.check_in_at IS NOT NULL\n              AND u.is_active = TRUE\n              AND u.role NOT IN ('SUPERADMIN', 'SATKER_ADMIN')\n            GROUP BY s.work_date, u.satker_id\n        ), totals AS (\n            SELECT satker_id, COUNT(*)::bigint AS total_users\n            FROM users\n            WHERE is_active = TRUE\n              AND role NOT IN ('SUPERADMIN', 'SATKER_ADMIN')\n            GROUP BY satker_id\n        )\n        SELECT\n            s.id AS satker_id,\n            s.code AS satker_code,\n            s.name AS satker_name,\n            COALESCE(c.checked_in_count, 0)::bigint AS checked_in_count,\n            COALESCE(t.total_users, 0)::bigint AS total_users\n        FROM satkers s\n        LEFT JOIN checked c ON c.satker_id = s.id\n        LEFT JOIN totals t ON t.satker_id = s.id\n        WHERE s.is_active = TRUE\n          AND s.id <> '11111111-1111-1111-1111-111111111111'::uuid\n          AND s.code <> '111111'\n          AND ($2::uuid IS NULL OR s.id = $2)\n        ORDER BY s.code ASC\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "satker_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "satker_code",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "satker_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "checked_in_count",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 4,
+        "name": "total_users",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Date",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "0c3510e26c65edc29dc72cf9dcb7c787cd66bd5b006c44efb2498e598ad62674"
+}

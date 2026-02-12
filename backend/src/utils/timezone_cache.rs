@@ -1,6 +1,6 @@
+use crate::AppState;
 use crate::database::settings::SettingsRepo;
 use crate::error::HttpError;
-use crate::AppState;
 use chrono_tz::Tz;
 use redis::AsyncCommands;
 

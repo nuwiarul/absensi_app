@@ -66,7 +66,9 @@ impl ErrorMessage {
             }
             ErrorMessage::UserNoLongerExists => "The user account no longer exists.".to_string(),
             ErrorMessage::SatkerNoLonger => "Satker not longer exists.".to_string(),
-            ErrorMessage::ForbiddenRequest => "Forbidden, anda tidak berhak mengakses request ini.".to_string(),
+            ErrorMessage::ForbiddenRequest => {
+                "Forbidden, anda tidak berhak mengakses request ini.".to_string()
+            }
             ErrorMessage::TokenNotProvided => "Authentication token was not provided.".to_string(),
             ErrorMessage::PermissionDenied => {
                 "You do not have permission to perform this action.".to_string()
